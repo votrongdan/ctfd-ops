@@ -1,0 +1,27 @@
+name: "Avenir Gallery"
+author: "Antigravity"
+category: "Web"
+description: |
+  Welcome to Avenir Gallery, a catalog displaying blueprints and specifications of high-tech space artifacts.
+  
+  Can you find the flag hidden in the system?
+
+value: 500
+type: dynamic_docker
+
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: simple_path_traversal-challenge:latest
+  redirect_type: http
+  redirect_port: 80
+
+tags:
+  - web
+  - path-traversal
+  - lfi
+  - easy
+
+state: visible
+version: "0.1"

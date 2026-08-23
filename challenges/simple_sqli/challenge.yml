@@ -1,0 +1,26 @@
+name: "Simple Search"
+author: "Antigravity"
+category: "Web"
+description: |
+  We built a simple search engine to catalog some high-tech engineering gadgets.
+  
+  Can you extract the secret flag hidden in the database?
+
+value: 500
+type: dynamic_docker
+
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: simple_sqli-challenge:latest
+  redirect_type: http
+  redirect_port: 80
+
+tags:
+  - web
+  - sqli
+  - easy
+
+state: visible
+version: "0.1"

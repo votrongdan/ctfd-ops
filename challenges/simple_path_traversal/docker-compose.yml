@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  challenge:
+    build: .
+    container_name: simple_path_traversal_challenge
+    ports:
+      - "9091:80"
+    environment:
+      - FLAG=flag{lfi_local_test_dynamic_flag_5678}
+    restart: always

@@ -1,0 +1,20 @@
+# Minimal SSH daemon configuration for Web2SSH CTF challenge
+Port 22
+ListenAddress 0.0.0.0
+Protocol 2
+
+# Security settings
+PermitRootLogin no
+PasswordAuthentication yes
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
+UsePAM yes
+X11Forwarding no
+PrintMotd no
+
+# User restriction
+AllowUsers ctf
+
+# Subsystem configuration
+Subsystem sftp internal-sftp

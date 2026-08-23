@@ -1,0 +1,32 @@
+name: "Python Sandbox 101"
+author: "Antigravity"
+attribution: "Antigravity"
+category: "Misc"
+description: |
+  Welcome to Python PyJail escaping!
+  An online Python evaluation REPL blocks standard string keywords (`import`, `open`, `read`, etc.).
+  
+  Bypass the keyword filter, access `/flag.txt`, and read the flag!
+
+value: 500
+type: dynamic_docker
+
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: misc_hello_pyjail-challenge:latest
+  redirect_type: http
+  redirect_port: 80
+
+image: .
+
+tags:
+  - misc
+  - pyjail
+  - python
+  - sandbox-escape
+  - easy
+
+state: visible
+version: "0.1"

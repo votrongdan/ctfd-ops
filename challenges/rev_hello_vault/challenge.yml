@@ -1,0 +1,31 @@
+name: "Vault Keypass 101"
+author: "Antigravity"
+attribution: "Antigravity"
+category: "Reverse Engineering"
+description: |
+  Welcome to reverse engineering!
+  A secure vault binary `vault` is restricting access to the secret system.
+  
+  Reverse engineer the password check algorithm inside the binary and open the vault!
+
+value: 500
+type: dynamic_docker
+
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: rev_hello_vault-challenge:latest
+  redirect_type: http
+  redirect_port: 80
+
+image: .
+
+tags:
+  - reverse-engineering
+  - c-binary
+  - xor
+  - easy
+
+state: visible
+version: "0.1"

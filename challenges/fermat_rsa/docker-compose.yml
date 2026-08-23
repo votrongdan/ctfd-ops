@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  challenge:
+    build: .
+    container_name: fermat_rsa_challenge
+    ports:
+      - "9091:80"
+    environment:
+      - FLAG=flag{fermat_local_test_dynamic_flag_1234}
+    restart: always

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo Overwrite 101 - CTF Challenge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(18, 26, 43, 0.75);
+            --accent-cyan: #00f2fe;
+            --accent-purple: #4facfe;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-glow: rgba(0, 242, 254, 0.25);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top, #1a233a 0%, #0b0f19 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle { color: var(--text-muted); font-size: 1.1rem; }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-group { display: flex; gap: 1rem; margin-top: 1rem; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 198, 255, 0.4); }
+        .btn-secondary { background: #1e293b; border: 1px solid #334155; }
+        .btn-secondary:hover { background: #334155; }
+        .terminal {
+            background: #050811;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'Fira Code', monospace;
+            color: #38bdf8;
+            min-height: 200px;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        textarea {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            resize: vertical;
+            min-height: 80px;
+            margin-top: 0.5rem;
+        }
+        textarea:focus { outline: 1px solid var(--accent-cyan); }
+        .badge {
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--accent-cyan);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-glow);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Pwn / Binary Exploitation</span>
+            <h1>Echo Overwrite 101</h1>
+            <p class="subtitle">Aegis Security Authorization Terminal Vulnerability</p>
+        </header>
+
+        <div class="card">
+            <div class="card-title">📌 Challenge Details</div>
+            <p style="margin-bottom: 1rem; line-height: 1.6;">
+                The Aegis security service authorization binary reads user input into a local buffer.
+                Due to insufficient boundary checks, input overflowing the 64-byte name buffer can overwrite adjacent stack variables!
+                Can you alter the <code>secret</code> variable to equal <code>0xdeadbeef</code> and retrieve the flag?
+            </p>
+            <div class="btn-group">
+                <a href="/download/chall" class="btn">⬇️ Download Binary (chall)</a>
+                <a href="/download/chall.c" class="btn btn-secondary">📄 Source Code (chall.c)</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">💻 Interactive Remote Console</div>
+            <p style="font-size: 0.95rem; color: var(--text-muted);">
+                Test your payload live against the target binary running in the sandbox environment.
+            </p>
+            
+            <label style="display: block; margin-top: 1rem; font-weight: 600;">Input Payload (Hex escaped or raw text):</label>
+            <textarea id="payloadInput" placeholder="Example: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\xef\xbe\xad\xde"></textarea>
+            
+            <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                <button class="btn" onclick="sendPayload()">🚀 Send Payload</button>
+                <button class="btn btn-secondary" onclick="generateDefaultPayload()">💡 Generate 0xdeadbeef Payload</button>
+            </div>
+
+            <div class="terminal" id="terminalOutput">=== Aegis Security Console Ready ===
+Click "Send Payload" to execute.</div>
+        </div>
+    </div>
+
+    <script>
+        function generateDefaultPayload() {
+            // 64 bytes of 'A' + 0xdeadbeef in little-endian (\xef\xbe\xad\xde)
+            let rawHex = "";
+            for (let i = 0; i < 64; i++) rawHex += "\\x41";
+            rawHex += "\\xef\\xbe\\xad\\xde\\x0a";
+            document.getElementById("payloadInput").value = rawHex;
+        }
+
+        async function sendPayload() {
+            const rawVal = document.getElementById("payloadInput").value;
+            const term = document.getElementById("terminalOutput");
+            term.textContent = "Executing payload...\n";
+
+            // Parse hex escapes like \xef or send literal string bytes
+            let byteArray = [];
+            let i = 0;
+            while (i < rawVal.length) {
+                if (rawVal.substr(i, 2) === "\\x" && i + 3 < rawVal.length) {
+                    let hexByte = rawVal.substr(i + 2, 2);
+                    byteArray.push(parseInt(hexByte, 16));
+                    i += 4;
+                } else if (rawVal.substr(i, 2) === "\\n") {
+                    byteArray.push(10);
+                    i += 2;
+                } else {
+                    byteArray.push(rawVal.charCodeAt(i));
+                    i++;
+                }
+            }
+
+            // Convert byte array to base64
+            let binaryStr = String.fromCharCode.apply(null, byteArray);
+            let payload_b64 = btoa(binaryStr);
+
+            try {
+                const res = await fetch("/api/interact", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ payload_b64: payload_b64 })
+                });
+                const data = await res.json();
+                if (data.output) {
+                    term.textContent = data.output;
+                } else if (data.error) {
+                    term.textContent = "Error: " + data.error;
+                }
+            } catch (err) {
+                term.textContent = "Network Error: " + err;
+            }
+        }
+    </script>
+</body>
+</html>

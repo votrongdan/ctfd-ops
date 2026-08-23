@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  challenge:
+    build: .
+    container_name: simple_sqli_challenge
+    ports:
+      - "9090:80"
+    environment:
+      - FLAG=flag{sqli_local_test_dynamic_flag_1234}
+    restart: always

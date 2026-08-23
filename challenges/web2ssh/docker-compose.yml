@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Player A instance simulation
+  player_a_container:
+    build: .
+    image: web2ssh-challenge:latest
+    ports:
+      - "8081:8080"
+      - "2221:22"
+    environment:
+      - FLAG=CTF{user_a_per_user_isolated_flag_11111}
+    container_name: web2ssh_player_a
+
+  # Player B instance simulation
+  player_b_container:
+    build: .
+    image: web2ssh-challenge:latest
+    ports:
+      - "8082:8080"
+      - "2222:22"
+    environment:
+      - FLAG=CTF{user_b_per_user_isolated_flag_99999}
+    container_name: web2ssh_player_b
