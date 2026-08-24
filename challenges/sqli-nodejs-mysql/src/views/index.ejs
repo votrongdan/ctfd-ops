@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product Search</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .error { color: red; font-family: monospace; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Product Search</h1>
+    <form method="POST" action="/">
+        <input type="text" name="query" placeholder="Enter product name" value="<%= query %>" required>
+        <button type="submit">Search</button>
+    </form>
+
+    <% if (error) { %>
+        <div class="error">Error: <%= error %></div>
+    <% } %>
+
+    <% if (typeof query !== 'undefined' && query !== '') { %>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (results && results.length > 0) { %>
+                    <% results.forEach(function(row) { %>
+                        <tr>
+                            <td><%= row[0] %></td>
+                            <td><%= row[1] %></td>
+                        </tr>
+                    <% }); %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="2">No results found.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    <% } %>
+</body>
+</html>

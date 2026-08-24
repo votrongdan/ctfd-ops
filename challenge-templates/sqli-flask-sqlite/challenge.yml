@@ -1,0 +1,19 @@
+name: "SQLi Flask Template"
+author: "Admin"
+category: "Web"
+description: |
+  A basic UNION SQL Injection challenge using Flask and SQLite.
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: template-sqli-flask-sqlite
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - sqli
+state: visible
+version: "0.1"
