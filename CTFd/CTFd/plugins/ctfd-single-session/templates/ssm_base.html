@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Single Session Monitor</h1>
+        <p class="lead mb-0">
+            {% if mode == "block" %}
+                <span class="badge badge-danger">BLOCK MODE</span>
+                Only one active session per account. New logins are rejected.
+            {% else %}
+                <span class="badge badge-info">MONITORING MODE</span>
+                Multiple sessions allowed. Admins are alerted.
+            {% endif %}
+            <span id="ssm-unresolved-badge" class="badge badge-warning ml-2" {% if unresolved_count == 0 %}style="display:none;"{% endif %}>
+                <span id="ssm-unresolved-count">{{ unresolved_count }}</span> unresolved event(s)
+            </span>
+            <span id="ssm-live-status" class="badge badge-secondary ml-2">Connecting...</span>
+        </p>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <ul class="nav nav-pills flex-column">
+                {% block menu %}{% endblock %}
+            </ul>
+        </div>
+        <div class="col-md-9">
+            {% block panel %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

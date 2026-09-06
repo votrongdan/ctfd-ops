@@ -1,0 +1,107 @@
+{% extends "ssm_base.html" %}
+
+{% block menu %}
+<li class="nav-item"><a class="nav-link" href="/plugins/ctfd-single-session/admin/sessions">Active Sessions</a></li>
+<li class="nav-item"><a class="nav-link" href="/plugins/ctfd-single-session/admin/events">Security Events</a></li>
+<li class="nav-item"><a class="nav-link active" href="/plugins/ctfd-single-session/admin/settings">Settings</a></li>
+{% endblock %}
+
+{% block panel %}
+<h3>Plugin Settings</h3>
+<p class="text-muted">Configure the Single Session Monitor plugin.</p>
+
+<form id="ssm-settings-form" class="mt-4">
+    <div class="form-group row">
+        <label class="col-sm-4 col-form-label font-weight-bold">Operational Mode</label>
+        <div class="col-sm-8">
+            <select class="form-control" name="mode" id="ssm-mode">
+                <option value="monitoring" {{ 'selected' if settings.mode == 'monitoring' }}>
+                    Monitoring — allow multiple sessions, alert admins
+                </option>
+                <option value="block" {{ 'selected' if settings.mode == 'block' }}>
+                    Block — allow only one session per account
+                </option>
+            </select>
+            <small class="form-text text-muted">
+                Switching modes does not invalidate existing sessions.
+                In Block Mode, new logins are rejected while an account already has an active session.
+            </small>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <label class="col-sm-4 col-form-label font-weight-bold">Event Cooldown (seconds)</label>
+        <div class="col-sm-8">
+            <input type="number" class="form-control" name="event_cooldown"
+                   value="{{ settings.event_cooldown }}" min="0">
+            <small class="form-text text-muted">
+                Minimum time between duplicate events for the same user.
+                Prevents event flooding. Default: 300 (5 minutes).
+            </small>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <label class="col-sm-4 col-form-label font-weight-bold">Heartbeat Interval (seconds)</label>
+        <div class="col-sm-8">
+            <input type="number" class="form-control" name="heartbeat_interval"
+                   value="{{ settings.heartbeat_interval }}" min="5">
+            <small class="form-text text-muted">
+                How often "last seen" is updated per session.
+                Lower values give more accuracy but increase database writes.
+                Default: 30 seconds.
+            </small>
+        </div>
+    </div>
+
+
+
+    <div class="form-group row">
+        <div class="col-sm-8 offset-sm-4">
+            <button type="submit" class="btn btn-primary" id="ssm-save-btn">
+                Save Settings
+            </button>
+            <span id="ssm-save-status" class="ml-2"></span>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var csrfNonce = init.csrfNonce;
+    var form = document.getElementById("ssm-settings-form");
+    var statusEl = document.getElementById("ssm-save-status");
+
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        var formData = new FormData(form);
+        var data = {};
+        formData.forEach(function(value, key) { data[key] = value; });
+
+        statusEl.textContent = "Saving...";
+        statusEl.className = "ml-2 text-muted";
+
+        fetch("/plugins/ctfd-single-session/api/settings", {
+            method: "PATCH",
+            headers: {
+                "CSRF-Token": csrfNonce,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        }).then(function(r) { return r.json(); }).then(function(resp) {
+            if (resp.success) {
+                statusEl.textContent = "Settings saved!";
+                statusEl.className = "ml-2 text-success font-weight-bold";
+                setTimeout(function() { location.reload(); }, 800);
+            } else {
+                statusEl.textContent = "Error: " + (resp.error || "Unknown error");
+                statusEl.className = "ml-2 text-danger";
+            }
+        }).catch(function(err) {
+            statusEl.textContent = "Network error";
+            statusEl.className = "ml-2 text-danger";
+        });
+    });
+});
+</script>
+{% endblock %}

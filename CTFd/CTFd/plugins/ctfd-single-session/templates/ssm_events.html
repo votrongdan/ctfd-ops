@@ -1,0 +1,260 @@
+{% extends "ssm_base.html" %}
+
+{% block menu %}
+<li class="nav-item"><a class="nav-link" href="/plugins/ctfd-single-session/admin/sessions">Active Sessions</a></li>
+<li class="nav-item"><a class="nav-link active" href="/plugins/ctfd-single-session/admin/events">Security Events</a></li>
+<li class="nav-item"><a class="nav-link" href="/plugins/ctfd-single-session/admin/settings">Settings</a></li>
+{% endblock %}
+
+{% block panel %}
+<h3>Security Events</h3>
+<p class="text-muted">Login anomalies detected by the plugin.</p>
+
+<div class="mb-3">
+    <a href="?resolved=false" class="btn btn-sm btn-outline-warning">Unresolved Only</a>
+    <a href="?type=multiple_sessions" class="btn btn-sm btn-outline-info">Multiple Sessions</a>
+    <a href="?type=login_blocked" class="btn btn-sm btn-outline-danger">Blocked Logins</a>
+    <a href="?" class="btn btn-sm btn-outline-secondary">All Events</a>
+</div>
+
+{% if events %}
+<div class="table-responsive">
+    <table class="table table-striped table-bordered" id="ssm-events-table">
+        <thead class="thead-dark">
+            <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Type</th>
+                <th>Sessions</th>
+                <th>Details</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in events %}
+            <tr id="event-row-{{ e.id }}" class="{{ 'table-success' if e.resolved else '' }}">
+                <td>{{ e.created_at.strftime('%Y-%m-%d %H:%M:%S') if e.created_at else "N/A" }}</td>
+                <td>
+                    <a href="/admin/users/{{ e.user_id }}">{{ e.username }}</a>
+                </td>
+                <td>
+                    {% if e.event_type == "multiple_sessions" %}
+                        <span class="badge badge-info">Multiple Sessions</span>
+                    {% elif e.event_type == "login_blocked" %}
+                        <span class="badge badge-danger">Login Blocked</span>
+                    {% else %}
+                        <span class="badge badge-secondary">{{ e.event_type }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ e.session_count }}</td>
+                <td>
+                    {% if e.sessions_info %}
+                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                            data-toggle="collapse" data-target="#detail-{{ e.id }}">
+                        Show Details
+                    </button>
+                    <div class="collapse mt-2" id="detail-{{ e.id }}">
+                        <pre class="small bg-light p-2" style="max-height:200px;overflow:auto;">{{ e.sessions_info | tojson(indent=2) }}</pre>
+                    </div>
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+                <td>
+                    {% if e.resolved %}
+                        <span class="badge badge-success">Resolved</span>
+                    {% else %}
+                        <span class="badge badge-warning">Open</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not e.resolved %}
+                    <button class="btn btn-sm btn-success ssm-resolve-btn"
+                            data-event-id="{{ e.id }}">
+                        Resolve
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Pagination #}
+{% if pagination.pages > 1 %}
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item"><a class="page-link" href="?page={{ pagination.prev_num }}">Previous</a></li>
+        {% endif %}
+        {% for p in pagination.iter_pages() %}
+            {% if p %}
+                <li class="page-item {{ 'active' if p == pagination.page }}">
+                    <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ pagination.next_num }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-secondary">No security events recorded.</div>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var csrfNonce = init.csrfNonce;
+    var currentPage = {{ pagination.page if pagination else 1 }};
+    
+    // Parse current URL params
+    var urlParams = new URLSearchParams(window.location.search);
+    var filterType = urlParams.get('type') || '';
+    var filterResolved = urlParams.get('resolved') || '';
+    
+    var isPolling = true;
+    var pollInterval = 5000;
+    var liveStatus = document.getElementById("ssm-live-status");
+    var tableBody = document.querySelector("#ssm-events-table tbody");
+
+    function updateLiveStatus(status, colorClass) {
+        if (!liveStatus) return;
+        liveStatus.className = "badge ml-2 badge-" + colorClass;
+        liveStatus.textContent = status;
+    }
+
+    function updateUnresolvedBadge(count) {
+        var badge = document.getElementById("ssm-unresolved-badge");
+        var countSpan = document.getElementById("ssm-unresolved-count");
+        if (!badge || !countSpan) return;
+        if (count > 0) {
+            badge.style.display = "inline-block";
+            countSpan.textContent = count;
+        } else {
+            badge.style.display = "none";
+        }
+    }
+
+    function formatTime(isoString) {
+        if (!isoString) return "N/A";
+        return isoString.replace("T", " ").substring(0, 19);
+    }
+
+    function pollEvents() {
+        if (!isPolling || document.hidden) return;
+
+        updateLiveStatus("Updating", "info");
+        var apiUrl = "/plugins/ctfd-single-session/api/events/live?page=" + currentPage;
+        if (filterType) apiUrl += "&type=" + filterType;
+        if (filterResolved) apiUrl += "&resolved=" + filterResolved;
+
+        fetch(apiUrl, {
+            headers: { "Accept": "application/json" }
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error("Network error");
+            return res.json();
+        })
+        .then(function(data) {
+            if (!data.success) throw new Error("API error");
+            
+            if (tableBody) {
+                var newHtml = "";
+                data.events.forEach(function(e) {
+                    var rowClass = e.resolved ? 'table-success' : '';
+                    newHtml += '<tr id="event-row-' + e.id + '" class="' + rowClass + '">';
+                    newHtml += '<td>' + formatTime(e.created_at) + '</td>';
+                    newHtml += '<td><a href="/admin/users/' + e.user_id + '">' + e.username + '</a></td>';
+                    
+                    newHtml += '<td>';
+                    if (e.event_type === "multiple_sessions") {
+                        newHtml += '<span class="badge badge-info">Multiple Sessions</span>';
+                    } else if (e.event_type === "login_blocked") {
+                        newHtml += '<span class="badge badge-danger">Login Blocked</span>';
+                    } else {
+                        newHtml += '<span class="badge badge-secondary">' + e.event_type + '</span>';
+                    }
+                    newHtml += '</td>';
+                    
+                    newHtml += '<td>' + e.session_count + '</td>';
+                    
+                    newHtml += '<td>';
+                    if (e.sessions_info) {
+                        newHtml += '<button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#detail-' + e.id + '">Show Details</button>';
+                        newHtml += '<div class="collapse mt-2" id="detail-' + e.id + '">';
+                        newHtml += '<pre class="small bg-light p-2" style="max-height:200px;overflow:auto;">' + JSON.stringify(e.sessions_info, null, 2) + '</pre>';
+                        newHtml += '</div>';
+                    } else {
+                        newHtml += 'N/A';
+                    }
+                    newHtml += '</td>';
+                    
+                    newHtml += '<td>';
+                    if (e.resolved) {
+                        newHtml += '<span class="badge badge-success">Resolved</span>';
+                    } else {
+                        newHtml += '<span class="badge badge-warning">Open</span>';
+                    }
+                    newHtml += '</td>';
+                    
+                    newHtml += '<td>';
+                    if (!e.resolved) {
+                        newHtml += '<button class="btn btn-sm btn-success ssm-resolve-btn" data-event-id="' + e.id + '">Resolve</button>';
+                    }
+                    newHtml += '</td></tr>';
+                });
+                
+                tableBody.innerHTML = newHtml;
+                attachButtonListeners();
+            }
+            
+            updateUnresolvedBadge(data.unresolved_count || 0);
+            updateLiveStatus("Live", "success");
+        })
+        .catch(function(err) {
+            console.error("Polling error:", err);
+            updateLiveStatus("Connection error", "danger");
+        });
+    }
+
+    function attachButtonListeners() {
+        document.querySelectorAll(".ssm-resolve-btn").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                var eventId = this.dataset.eventId;
+                fetch("/plugins/ctfd-single-session/api/events/" + eventId + "/resolve", {
+                    method: "PATCH",
+                    headers: {"CSRF-Token": csrfNonce, "Content-Type": "application/json"}
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (data.success) {
+                        // Optimistically update or re-poll
+                        pollEvents();
+                    } else {
+                        alert("Failed: " + (data.error || "Unknown error"));
+                    }
+                });
+            });
+        });
+    }
+
+    attachButtonListeners();
+    updateLiveStatus("Live", "success");
+
+    setInterval(pollEvents, pollInterval);
+
+    document.addEventListener("visibilitychange", function() {
+        if (document.hidden) {
+            updateLiveStatus("Paused", "secondary");
+        } else {
+            pollEvents();
+        }
+    });
+});
+</script>
+{% endblock %}
