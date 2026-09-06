@@ -1,0 +1,19 @@
+name: "Example Upload - Resume"
+author: "Admin"
+category: "Web"
+description: |
+  Submit your resume for the open position. We only accept PDF, right?
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: example-upload-resume
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - upload
+state: visible
+version: "0.1"

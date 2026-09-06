@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Notes</title>
+</head>
+<body>
+    <h1>Welcome, User!</h1>
+    <h2>Your Notes:</h2>
+    <ul>
+        {% for note in notes %}
+            <li><a href="/note?id={{ note[0] }}">{{ note[1] }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

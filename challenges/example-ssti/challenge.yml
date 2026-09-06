@@ -1,0 +1,19 @@
+name: "Example SSTI - Signature Gen"
+author: "Admin"
+category: "Web"
+description: |
+  Generate your custom email signature. Don't worry, it's perfectly safe!
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: example-ssti-signature
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - ssti
+state: visible
+version: "0.1"

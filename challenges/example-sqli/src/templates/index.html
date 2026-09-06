@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hospital Directory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f0f4f8; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
+        .container { background: #fff; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; }
+        h1 { color: #2c3e50; margin-top: 0; margin-bottom: 1.5rem; font-weight: 600; text-align: center; }
+        p { text-align: center; color: #555; }
+        form { display: flex; flex-direction: column; gap: 1rem; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccd1d9; border-radius: 6px; box-sizing: border-box; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: #3498db; }
+        button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.2s, transform 0.1s; font-weight: 600; }
+        button:hover { background: #2980b9; transform: translateY(-1px); }
+        .error { color: #e74c3c; background: #fadbd8; padding: 10px; border-radius: 6px; margin-top: 1.5rem; font-size: 0.95rem; }
+        ul { list-style-type: none; padding: 0; margin-top: 1.5rem; }
+        li { background: #f9fbfd; padding: 15px; border-radius: 6px; border: 1px solid #e1e8ed; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <h1>Patient Search</h1>
+    <p>Search our hospital database for patient records.</p>
+    
+    <!-- Customized input name -->
+    <form method="POST" action="/">
+        <input type="text" name="patient_name" value="{{ query }}" placeholder="Search patients...">
+        <button type="submit">Search</button>
+    </form>
+
+    {% if error %}
+        <p style="color: red;">System Error: {{ error }}</p>
+    {% endif %}
+
+    {% if results %}
+        <h2>Records:</h2>
+        <ul>
+            {% for row in results %}
+                <li><strong>Patient:</strong> {{ row[0] }} | <strong>Diagnosis:</strong> {{ row[1] }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    </div>
+</body>
+</html>

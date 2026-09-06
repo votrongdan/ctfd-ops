@@ -1,9 +1,0 @@
-version: "3"
-services:
-  challenge:
-    build: .
-    image: osint_hello_intranet-challenge:latest
-    ports:
-      - "8004:80"
-    environment:
-      - FLAG=flag{0s1n7_r3c0n_d1sc0v3ry_m4st3r_17a89b}

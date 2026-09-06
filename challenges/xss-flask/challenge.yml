@@ -1,0 +1,19 @@
+name: "XSS Flask Template"
+author: "Admin"
+category: "Web"
+description: |
+  A basic Reflected XSS challenge with an Admin Bot.
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: template-xss-flask
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - xss
+state: visible
+version: "0.1"

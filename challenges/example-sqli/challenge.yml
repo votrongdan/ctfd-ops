@@ -1,0 +1,19 @@
+name: "Example SQLi - Hospital"
+author: "Admin"
+category: "Web"
+description: |
+  We have a hospital directory. Can you find the hidden patient record?
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: example-sqli-hospital
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - sqli
+state: visible
+version: "0.1"

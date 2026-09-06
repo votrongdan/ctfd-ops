@@ -1,0 +1,19 @@
+name: "Example XSS - Helpdesk"
+author: "Admin"
+category: "Web"
+description: |
+  Check the status of your helpdesk ticket. Wait, did you send a weird link to the admin?
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: example-xss-helpdesk
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - xss
+state: visible
+version: "0.1"

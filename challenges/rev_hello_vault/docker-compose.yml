@@ -1,9 +1,0 @@
-version: "3"
-services:
-  challenge:
-    build: .
-    image: rev_hello_vault-challenge:latest
-    ports:
-      - "8002:80"
-    environment:
-      - FLAG=flag{r3v3rs1ng_1s_n07_th47_h4rd_8a92b1}

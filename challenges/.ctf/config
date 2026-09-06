@@ -3,4 +3,15 @@ url = http://localhost:8000/
 access_token = ctfd_c0333d3570eef51ca46ecdd97ae1eea2d5efc16f78c59bc65ac1fbb3e6b78906
 
 [challenges]
+example-file-upload = example-file-upload
+example-idor = example-idor
+example-sqli = example-sqli
+example-ssti = example-ssti
+example-xss = example-xss
+file-upload-flask = file-upload-flask
+idor-flask = idor-flask
+ssti-flask = ssti-flask
+xss-flask = xss-flask
+sqli-flask-sqlite = sqli-flask-sqlite
+example-ssrf = example-ssrf
 

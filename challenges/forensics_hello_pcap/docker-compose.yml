@@ -1,9 +1,0 @@
-version: "3"
-services:
-  challenge:
-    build: .
-    image: forensics_hello_pcap-challenge:latest
-    ports:
-      - "8003:80"
-    environment:
-      - FLAG=flag{pcap_4nalys1s_w17h_w1r3sh4rk_f392a1}

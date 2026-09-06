@@ -1,0 +1,32 @@
+# Tên của challenge hiển thị trên giao diện CTFd
+name: "SSTI Flask Template"
+# Tên tác giả tạo ra challenge
+author: "Admin"
+# Thể loại challenge (Web, Pwn, Crypto...)
+category: "Web"
+description: |
+  A basic Server-Side Template Injection (SSTI) challenge using Jinja2.
+# Điểm số mặc định hoặc điểm khởi đầu (nếu dùng dynamic scoring)
+value: 500
+# Loại challenge. Đối với CTFd-Whale, bắt buộc phải là 'dynamic_docker'
+type: dynamic_docker
+# Các cấu hình bổ sung (cho dynamic scoring và CTFd-Whale)
+extra:
+  # Điểm bắt đầu (dành cho tính điểm động - dynamic decay)
+  initial: 500
+  # Số lượng người giải tối đa trước khi điểm giảm xuống mức minimum
+  decay: 100
+  # Điểm thấp nhất mà challenge có thể tụt xuống
+  minimum: 50
+  # Tên Docker Image sẽ được khởi tạo khi user bấm Start Instance
+  docker_image: template-ssti-flask
+  redirect_type: http
+  # Port bên trong container mà FRP sẽ route traffic tới (thường là 80)
+  redirect_port: 80
+tags:
+  - web
+  - ssti
+# Trạng thái hiển thị của challenge khi được deploy ('visible' hoặc 'hidden')
+state: visible
+# Phiên bản cấu trúc của file challenge.yml này (được ctfcli hỗ trợ)
+version: "0.1"

@@ -1,0 +1,19 @@
+name: "IDOR Flask Template"
+author: "Admin"
+category: "Web"
+description: |
+  A basic Insecure Direct Object Reference (IDOR) challenge.
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: template-idor-flask
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - idor
+state: visible
+version: "0.1"

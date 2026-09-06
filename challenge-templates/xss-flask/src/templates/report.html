@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Report to Admin</title>
+</head>
+<body>
+    <h1>Report Issue</h1>
+    <p>Send a link to the admin and they will check it out.</p>
+    
+    {% if msg %}
+        <p><strong>{{ msg }}</strong></p>
+    {% endif %}
+
+    <form method="POST" action="/report">
+        <input type="text" name="url" placeholder="http://..." required size="50">
+        <button type="submit">Send</button>
+    </form>
+    <br>
+    <a href="/">Back to Home</a>
+</body>
+</html>

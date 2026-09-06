@@ -1,0 +1,19 @@
+name: "Example IDOR - Bank"
+author: "Admin"
+category: "Web"
+description: |
+  Welcome to our secure banking system. Only view your own account!
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: example-idor-bank
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - idor
+state: visible
+version: "0.1"

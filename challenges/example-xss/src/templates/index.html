@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IT Helpdesk</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background: #2b2b2b; color: #f1f1f1; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: #3c3f41; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); width: 100%; max-width: 450px; text-align: center; }
+        h1 { margin-top: 0; color: #ffab00; font-weight: 500; }
+        p { color: #bbb; line-height: 1.5; }
+        .status { background: #ffab00; color: #2b2b2b; display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        form { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #555; background: #2b2b2b; color: white; border-radius: 4px; box-sizing: border-box; }
+        input[type="text"]:focus { border-color: #ffab00; outline: none; }
+        button { background: #ffab00; color: #2b2b2b; border: none; padding: 12px; border-radius: 4px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        a { color: #ffab00; text-decoration: none; font-size: 0.9rem; display: inline-block; margin-top: 1.5rem; transition: color 0.2s; }
+        a:hover { color: #ffd166; }
+    </style>
+</head>
+<body>
+    <div class="card">
+    <h1>Ticket Status</h1>
+    <p>Viewing status for ticket: <strong>{{ ticket_id | safe }}</strong></p>
+    <div class="status">Pending Review</div>
+    
+    <form method="GET" action="/">
+        <input type="text" name="ticket_id" placeholder="Enter Ticket ID">
+        <button type="submit">Check</button>
+    </form>
+    <br>
+    <a href="/support">Escalate to Support Staff</a>
+    </div>
+</body>
+</html>

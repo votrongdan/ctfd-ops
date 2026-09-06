@@ -1,9 +1,0 @@
-version: "3"
-services:
-  challenge:
-    build: .
-    image: misc_hello_pyjail-challenge:latest
-    ports:
-      - "8005:80"
-    environment:
-      - FLAG=flag{pyj41l_b3g1nn3r_3sc4p3_79c1a4}

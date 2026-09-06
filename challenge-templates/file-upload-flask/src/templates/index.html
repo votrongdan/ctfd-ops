@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Upload</title>
+</head>
+<body>
+    <h1>Upload your Avatar</h1>
+    <p>Please upload your avatar image.</p>
+    
+    {% if msg %}
+        <p><strong>{{ msg }}</strong></p>
+    {% endif %}
+
+    <form method="POST" action="/" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+    </form>
+</body>
+</html>

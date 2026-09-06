@@ -1,0 +1,19 @@
+name: "SSTI Flask Template"
+author: "Admin"
+category: "Web"
+description: |
+  A basic Server-Side Template Injection (SSTI) challenge using Jinja2.
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: template-ssti-flask
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - ssti
+state: visible
+version: "0.1"

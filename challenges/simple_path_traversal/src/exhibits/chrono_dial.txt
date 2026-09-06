@@ -1,9 +1,0 @@
-Project: Avenir-Temporal
-Status: PROTOTYPE
-Security Class: IV
-
---- TECHNICAL SPECIFICATIONS ---
-- Dial Invariance: ±0.03 seconds per epoch
-- Resonance Core: Chrono-stabilized Tachyon crystals
-- Decay Margin: 0.0001%
-- Warning: Exposing dial to high electric fields can cause localized temporal loop events. Use with extreme caution.

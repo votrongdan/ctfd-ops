@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Greeting Service</title>
+</head>
+<body>
+    <!-- SAFE TO CUSTOMIZE: HTML/CSS changes won't break the challenge -->
+    <h1>Greeting Service</h1>
+    <!-- VULNERABILITY: Jinja2 'safe' filter disables HTML escaping, allowing XSS -->
+    <p>Hello, {{ name | safe }}!</p>
+    
+    <form method="GET" action="/">
+        <input type="text" name="name" placeholder="Enter your name">
+        <button type="submit">Greet Me</button>
+    </form>
+
+    <br>
+    <a href="/report">Report an issue to Admin</a>
+</body>
+</html>

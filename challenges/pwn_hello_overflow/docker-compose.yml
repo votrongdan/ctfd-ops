@@ -1,9 +1,0 @@
-version: "3"
-services:
-  challenge:
-    build: .
-    image: pwn_hello_overflow-challenge:latest
-    ports:
-      - "8001:80"
-    environment:
-      - FLAG=flag{pwn_b3g1nn3r_buff3r_0v3rfl0w_38a91c}

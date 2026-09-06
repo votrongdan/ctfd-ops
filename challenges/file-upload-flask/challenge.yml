@@ -1,0 +1,19 @@
+name: "File Upload Flask Template"
+author: "Admin"
+category: "Web"
+description: |
+  A basic File Upload Vulnerability (Path Traversal to RCE).
+value: 500
+type: dynamic_docker
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: template-upload-flask
+  redirect_type: http
+  redirect_port: 80
+tags:
+  - web
+  - upload
+state: visible
+version: "0.1"

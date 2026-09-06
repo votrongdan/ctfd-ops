@@ -1,48 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Product Search</title>
-    <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
-        table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .error { color: red; font-family: monospace; margin-top: 1rem; }
-    </style>
+    <title>SQL Injection Challenge</title>
 </head>
 <body>
+    <!-- SAFE TO CUSTOMIZE: You can change all the HTML/CSS here. -->
     <h1>Product Search</h1>
+    <p>Search our database for the latest gadgets!</p>
+    
+    <!-- CAREFUL: If you change the input name='query', update app.py to match. -->
     <form method="POST" action="/">
-        <input type="text" name="query" placeholder="Enter product name" value="{{ query }}" required>
+        <input type="text" name="query" value="{{ query }}" placeholder="Search products...">
         <button type="submit">Search</button>
     </form>
 
     {% if error %}
-        <div class="error">Error: {{ error }}</div>
+        <p style="color: red;">Database Error: {{ error }}</p>
     {% endif %}
 
-    {% if query %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Product Name</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if results %}
-                    {% for row in results %}
-                        <tr>
-                            <td>{{ row[0] }}</td>
-                            <td>{{ row[1] }}</td>
-                        </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="2">No results found.</td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
+    {% if results %}
+        <h2>Search Results:</h2>
+        <ul>
+            {% for row in results %}
+                <!-- VULNERABILITY: The output displays columns fetched from the database, allowing data extraction. -->
+                <li><strong>{{ row[0] }}</strong> - {{ row[1] }}</li>
+            {% endfor %}
+        </ul>
     {% endif %}
 </body>
 </html>
