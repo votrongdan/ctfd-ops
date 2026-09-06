@@ -48,7 +48,7 @@ Trong vai trò là người tạo đề, việc chỉnh sửa các tệp tin tro
 
 Để triển khai một thử thách mới, vui lòng tuân thủ quy trình sau:
 
-1. **Lựa chọn và sao chép Template**: `cp -r challenge-templates/sqli-php-mysql challenges/my-new-sqli`
+1. **Lựa chọn và sao chép Template**: `cp -r challenge-templates/sqli-flask-sqlite challenges/my-new-sqli`
 2. **Cập nhật Metadata**: Mở tệp `challenge.yml`, chỉnh sửa Tên bài, mô tả, điểm số, và cấu hình `docker_image: my-new-sqli:latest`.
 3. **Tùy biến mã nguồn**: Mở thư mục `src/`, điều chỉnh giao diện (HTML/CSS) hoặc các khối logic (như câu truy vấn SQL) nhằm định hình kịch bản khai thác.
 4. **Đóng gói Docker Image**: 
@@ -91,7 +91,7 @@ CTFd-Whale đảm nhận nhiệm vụ quản lý vòng đời runtime của cont
 
 ## 9. Cấu hình Đa Dịch Vụ (Multi-Port Configuration)
 
-CTFd-Whale hỗ trợ việc expose và định tuyến lưu lượng (routing) đến nhiều dịch vụ chạy trên nhiều port bên trong cùng một container. Một ví dụ tiêu biểu là thử thách **Web2SSH** (thư mục `challenges/web2ssh/`), trong đó container vận hành đồng thời HTTP Web Service (port 8080) và SSH Service (port 22).
+CTFd-Whale hỗ trợ việc expose và định tuyến lưu lượng (routing) đến nhiều dịch vụ chạy trên nhiều port bên trong cùng một container. 
 
 Để thiết lập tính năng này, quản trị viên sử dụng cấu hình `redirect_rules` thay cho `redirect_type` và `redirect_port` trong tệp `challenge.yml`. Cú pháp như sau:
 
@@ -103,8 +103,6 @@ extra:
 
 - `8080/http`: Chỉ định hệ thống xử lý cổng 8080 dưới dạng HTTP traffic. Whale sẽ tạo ra một HTTP Proxy (thường thông qua domain) để người chơi có thể truy cập qua liên kết trên giao diện.
 - `22/direct`: Chỉ định hệ thống định tuyến TCP trực tiếp (direct routing) đối với cổng 22. Whale sẽ mở một cổng ngẫu nhiên trên host (ví dụ: `2221`) và forward trực tiếp vào cổng 22 của container. Người chơi có thể sử dụng công cụ dòng lệnh để kết nối (ví dụ: `ssh ctf@<host> -p 2221`).
-
-Chi tiết về kiến trúc đa dịch vụ có thể được tham khảo thêm tại tài liệu `challenges/web2ssh/README.md`.
 
 ## 10. Tiêu chuẩn phát triển (Best practices)
 
