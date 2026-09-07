@@ -82,11 +82,11 @@ CTFd/uploads
 *.zip
 
 # non-default plugins
-CTFd/plugins/*
-!CTFd/plugins/challenges/
-!CTFd/plugins/dynamic_challenges/
-!CTFd/plugins/flags/
-!CTFd/plugins/*.py
+# CTFd/plugins/*
+# !CTFd/plugins/challenges/
+# !CTFd/plugins/dynamic_challenges/
+# !CTFd/plugins/flags/
+# !CTFd/plugins/*.py
 
 # non-default themes
 CTFd/themes/*
