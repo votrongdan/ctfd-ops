@@ -16,7 +16,7 @@ def test_api_sessions_live_admin(client, admin_user):
         mock_pagination.page = 1
         mock_get_sessions.return_value = mock_pagination
         
-        response = client.get("/plugins/ctfd-single-session/api/sessions/live")
+        response = client.get("/plugins/ctfd-single-session/api/sessions/live", headers={"Content-Type": "application/json"})
         assert response.status_code == 200
         data = response.get_json()
         assert data["success"] is True
@@ -29,7 +29,7 @@ def test_api_sessions_live_user(client, user):
         sess["nonce"] = "1234"
         sess["type"] = "user"
 
-    response = client.get("/plugins/ctfd-single-session/api/sessions/live")
+    response = client.get("/plugins/ctfd-single-session/api/sessions/live", headers={"Content-Type": "application/json"})
     assert response.status_code == 403
 
 def test_api_events_live_admin(client, admin_user):

@@ -7,6 +7,8 @@ from CTFd.models import db
 from CTFd.utils import get_config, set_config, logging
 
 from .base import BaseRouter
+from ..redirects import rules_for, http_subdomain
+from CTFd.plugins._lifecycle import lifecycle_lock
 from ..cache import CacheProvider
 from ..db import DBContainer
 from ..exceptions import WhaleError, WhaleWarning
@@ -41,41 +43,34 @@ class FrpRouter(BaseRouter):
                 WhaleWarning
             )
 
-    def reload(self, exclude=None):
+    def reload(self, exclude=None, include=None):
+        with lifecycle_lock("whale-routing"):
+            return self._reload(exclude, include)
+
+    def _reload(self, exclude=None, include=None):
         rules = []
-        for container in DBContainer.get_all_alive_container():
+        containers = list(DBContainer.get_all_alive_container())
+        if include is not None and all(c.id != include.id for c in containers):
+            containers.append(include)
+        for container in containers:
             if container.uuid == exclude:
                 continue
-                
-            if container.challenge.redirect_rules:
-                for rule in [r.strip() for r in container.challenge.redirect_rules.split(",") if r.strip()]:
-                    if "/" in rule:
-                        port, rtype = rule.split("/", 1)
-                        name = f'{rtype}_{container.user_id}_{container.uuid}_{port}'
-                        config = {
-                            'type': self.types.get(rtype, rtype),
-                            'local_ip': f'{container.user_id}-{container.uuid}',
-                            'local_port': port,
-                            'use_compression': 'true',
-                        }
-                        if config['type'] == 'http':
-                            config['subdomain'] = container.http_subdomain
-                        elif config['type'] == 'tcp':
-                            # Get the allocated port. Since container.ports is a JSON dict (or string keys), map using str(port)
-                            config['remote_port'] = container.ports.get(str(port), container.ports.get(port))
-                        rules.append(self.FrpRule(name, config))
-            else:
-                name = f'{container.challenge.redirect_type}_{container.user_id}_{container.uuid}'
+            for port, kind in rules_for(container.challenge):
+                suffix = "_" + port if container.challenge.redirect_rules else ""
+                name = f'{kind}_{container.user_id}_{container.uuid}{suffix}'
                 config = {
-                    'type': self.types[container.challenge.redirect_type],
+                    'type': self.types[kind],
                     'local_ip': f'{container.user_id}-{container.uuid}',
-                    'local_port': container.challenge.redirect_port,
+                    'local_port': port,
                     'use_compression': 'true',
                 }
-                if config['type'] == 'http':
-                    config['subdomain'] = container.http_subdomain
-                elif config['type'] == 'tcp':
-                    config['remote_port'] = container.port
+                if kind == 'http':
+                    config['subdomain'] = http_subdomain(container, port)
+                else:
+                    remote = (container.ports or {}).get(port) if container.challenge.redirect_rules else container.port
+                    if not remote:
+                        raise WhaleError("Missing reserved port for container " + str(container.id))
+                    config['remote_port'] = remote
                 rules.append(self.FrpRule(name, config))
 
         try:
@@ -84,7 +79,7 @@ class FrpRouter(BaseRouter):
                 if '[common]' in common:
                     self.common = common
                 else:
-                    remote = self.ses.get(f'{self.url}/api/config')
+                    remote = self.ses.get(f'{self.url}/api/config', timeout=5)
                     assert remote.status_code == 200
                     set_config("whale:frp_config_template", remote.text)
                     self.common = remote.text
@@ -103,90 +98,59 @@ class FrpRouter(BaseRouter):
             ) from None
 
     def access(self, container: WhaleContainer):
-        if container.challenge.redirect_rules:
-            access_strs = []
-            for rule in [r.strip() for r in container.challenge.redirect_rules.split(",") if r.strip()]:
-                if "/" in rule:
-                    port, rtype = rule.split("/", 1)
-                    if rtype == 'direct':
-                        alloc_port = container.ports.get(str(port), container.ports.get(port, 'Unknown'))
-                        access_strs.append(f'nc {get_config("whale:frp_direct_ip_address", "127.0.0.1")} {alloc_port}')
-                    elif rtype == 'http':
-                        host = get_config("whale:frp_http_domain_suffix", "")
-                        hport = get_config("whale:frp_http_port", "80")
-                        host += f':{hport}' if hport != '80' else ''
-                        access_strs.append(f'<a target="_blank" href="http://{container.http_subdomain}.{host}/">Link to the Challenge ({port})</a>')
-            return '<br>'.join(access_strs)
-
-        if container.challenge.redirect_type == 'direct':
-            return f'nc {get_config("whale:frp_direct_ip_address", "127.0.0.1")} {container.port}'
-        elif container.challenge.redirect_type == 'http':
-            host = get_config("whale:frp_http_domain_suffix", "")
-            port = get_config("whale:frp_http_port", "80")
-            host += f':{port}' if port != '80' else ''
-            return f'<a target="_blank" href="http://{container.http_subdomain}.{host}/">Link to the Challenge</a>'
-        return ''
+        result = []
+        for port, kind in rules_for(container.challenge):
+            if kind == 'direct':
+                remote = (container.ports or {}).get(port, 'Unknown') if container.challenge.redirect_rules else container.port
+                result.append(f'nc {get_config("whale:frp_direct_ip_address", "127.0.0.1")} {remote}')
+            else:
+                host = get_config("whale:frp_http_domain_suffix", "")
+                hport = str(get_config("whale:frp_http_port", "80"))
+                host += f':{hport}' if hport != '80' else ''
+                label = f' ({port})' if container.challenge.redirect_rules else ''
+                result.append(f'<a target="_blank" href="http://{http_subdomain(container, port)}.{host}/">Link to the Challenge{label}</a>')
+        return '<br>'.join(result)
 
     def register(self, container: WhaleContainer):
-        if container.challenge.redirect_rules:
-            if not container.ports:
-                container.ports = {}
-            # SQLAlchemy JSON mutation tracking requires setting the dict again or using flag_modified
-            new_ports = dict(container.ports)
-            
-            for rule in [r.strip() for r in container.challenge.redirect_rules.split(",") if r.strip()]:
-                if "/" in rule:
-                    port, rtype = rule.split("/", 1)
-                    if rtype == 'direct':
-                        if str(port) not in new_ports and port not in new_ports:
-                            avail_port = CacheProvider(app=current_app).get_available_port()
-                            if not avail_port:
-                                return False, 'No available ports. Please wait for a few minutes.'
-                            new_ports[str(port)] = avail_port
-            container.ports = new_ports
-            from sqlalchemy.orm.attributes import flag_modified
-            flag_modified(container, "ports")
-            db.session.commit()
-        else:
-            if container.challenge.redirect_type == 'direct':
-                if not container.port:
-                    port = CacheProvider(app=current_app).get_available_port()
-                    if not port:
-                        return False, 'No available ports. Please wait for a few minutes.'
-                    container.port = port
+        with lifecycle_lock("whale-routing"):
+            pool = CacheProvider(app=current_app)
+            for port, kind in rules_for(container.challenge):
+                if kind != 'direct':
+                    continue
+                existing = (container.ports or {}).get(port) if container.challenge.redirect_rules else container.port
+                if existing:
+                    continue
+                reserved = pool.get_available_port()
+                if reserved is None:
+                    raise WhaleError('No available ports. Please wait for a few minutes.')
+                try:
+                    if container.challenge.redirect_rules:
+                        container.ports = dict(container.ports or {}, **{port: reserved})
+                    else:
+                        container.port = reserved
+                    # Persist each reservation so crash recovery can find it.
                     db.session.commit()
-            elif container.challenge.redirect_type == 'http':
-                pass
-        self.reload()
-        return True, 'success'
+                except Exception:
+                    db.session.rollback()
+                    pool.add_available_port(reserved)
+                    raise
+            self.reload(include=container)
+            return True, 'success'
 
     def unregister(self, container: WhaleContainer):
-        redis_util = CacheProvider(app=current_app)
-        
-        if container.challenge.redirect_rules:
-            if container.ports:
-                for port_val in container.ports.values():
-                    try:
-                        redis_util.add_available_port(port_val)
-                    except Exception as e:
-                        logging.log(
-                            'whale', 'Error deleting port from cache',
-                            name=container.user.name,
-                            challenge_id=container.challenge_id,
-                        )
-        else:
-            if container.challenge.redirect_type == 'direct':
-                try:
-                    redis_util.add_available_port(container.port)
-                except Exception as e:
-                    logging.log(
-                        'whale', 'Error deleting port from cache',
-                        name=container.user.name,
-                        challenge_id=container.challenge_id,
-                    )
-                    return False, 'Error deleting port from cache'
-        self.reload(exclude=container.uuid)
-        return True, 'success'
+        with lifecycle_lock("whale-routing"):
+            # Never free a port while FRP may still be serving its old route.
+            self.reload(exclude=container.uuid)
+            ports = set((container.ports or {}).values())
+            if container.port:
+                ports.add(container.port)
+            container.ports = {}
+            container.port = 0
+            db.session.commit()
+            pool = CacheProvider(app=current_app)
+            for port in ports:
+                pool.add_available_port(port)
+            return True, 'success'
 
     def check_availability(self):
         try:

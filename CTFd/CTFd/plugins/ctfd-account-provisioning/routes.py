@@ -12,10 +12,11 @@ from CTFd.utils.decorators import admins_only
 
 from .i18n import get_supported_languages, get_text
 from .services.provisioning_service import (
-    cleanup_after_download,
+    cleanup_preview,
     get_document,
     process_upload,
     provision_accounts,
+    recoverable_documents,
 )
 
 logger = logging.getLogger("ctfd-account-provisioning")
@@ -72,6 +73,7 @@ def admin_page():
         email_domain=email_domain,
         nonce=nonce,
         supported_languages=get_supported_languages(),
+        recovery_jobs=recoverable_documents(),
     )
 
 
@@ -148,6 +150,7 @@ def upload():
             "password": p.password,
             "status": p.status,
             "error": get_text(p.error, lang) if p.error else "",
+            "errors": p.errors,
         })
 
     return jsonify({
@@ -237,12 +240,18 @@ def download(doc_token):
     if doc_output is None:
         return jsonify({"success": False, "error": "Document not found."}), 404
 
-    # Clean up after sending
-    cleanup_after_download(doc_token)
-
-    return send_file(
+    response = send_file(
         doc_output,
         as_attachment=True,
         download_name="player_credentials.docx",
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@blueprint.route("/admin/preview/<token>", methods=["DELETE"])
+@admins_only
+def cancel_preview(token):
+    cleanup_preview(token)
+    return jsonify(success=True)

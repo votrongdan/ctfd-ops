@@ -1,4 +1,6 @@
 import fcntl
+import importlib
+from CTFd.plugins._lifecycle import additive_upgrade
 import warnings
 
 import requests
@@ -30,7 +32,8 @@ def load(app):
     # upgrade()
     plugin_name = __name__.split('.')[-1]
     set_config('whale:plugin_name', plugin_name)
-    app.db.create_all()
+    migration = importlib.import_module(__name__ + ".migrations.0001_multi_port")
+    additive_upgrade(plugin_name, migration.revision, migration.upgrade)
     if not get_config("whale:setup"):
         setup_default_configs()
 
@@ -96,7 +99,7 @@ def load(app):
         with app.app_context():
             results = DBContainer.get_all_expired_container()
             for r in results:
-                ControlUtil.try_remove_container(r.user_id)
+                ControlUtil.try_remove_container(r.user_id, expired_only=True)
 
     app.register_blueprint(page_blueprint)
 

@@ -16,6 +16,7 @@ class ParticipantRecord:
     email: str           # Generated placeholder email
     password: str        # Generated plaintext password (kept in memory only)
     status: str = "valid"    # "valid" or "invalid"
+    errors: dict = field(default_factory=dict)
     error: str = ""          # Error message key if invalid
 
 

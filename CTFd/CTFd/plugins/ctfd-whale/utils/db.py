@@ -9,6 +9,7 @@ class DBContainer:
     @staticmethod
     def create_container_record(user_id, challenge_id):
         container = WhaleContainer(user_id=user_id, challenge_id=challenge_id)
+        container.status = 0  # pending; recovered if creation is interrupted
         db.session.add(container)
         db.session.commit()
 
@@ -39,8 +40,8 @@ class DBContainer:
 
         q = db.session.query(WhaleContainer)
         q = q.filter(
-            WhaleContainer.start_time <
-            datetime.datetime.now() - datetime.timedelta(seconds=timeout)
+            db.or_(WhaleContainer.status != 1, WhaleContainer.start_time <
+                   datetime.datetime.now() - datetime.timedelta(seconds=timeout))
         )
         return q.all()
 
@@ -50,6 +51,7 @@ class DBContainer:
 
         q = db.session.query(WhaleContainer)
         q = q.filter(
+            WhaleContainer.status == 1,
             WhaleContainer.start_time >=
             datetime.datetime.now() - datetime.timedelta(seconds=timeout)
         )
@@ -66,6 +68,7 @@ class DBContainer:
 
         q = db.session.query(WhaleContainer)
         q = q.filter(
+            WhaleContainer.status == 1,
             WhaleContainer.start_time >=
             datetime.datetime.now() - datetime.timedelta(seconds=timeout)
         )
@@ -78,6 +81,7 @@ class DBContainer:
 
         q = db.session.query(WhaleContainer)
         q = q.filter(
+            WhaleContainer.status == 1,
             WhaleContainer.start_time >=
             datetime.datetime.now() - datetime.timedelta(seconds=timeout)
         )

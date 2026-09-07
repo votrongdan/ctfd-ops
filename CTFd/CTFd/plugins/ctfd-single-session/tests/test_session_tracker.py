@@ -7,11 +7,12 @@ from CTFd.plugins.ctfd_single_session.session_tracker import SessionTracker, has
 @patch('CTFd.plugins.ctfd_single_session.session_tracker.db')
 @patch('CTFd.plugins.ctfd_single_session.session_tracker.get_config')
 @patch('CTFd.plugins.ctfd_single_session.session_tracker.get_session_lifetime')
-def test_register_session(mock_lifetime, mock_get_config, mock_db):
+def test_register_session(mock_lifetime, mock_get_config, mock_db, app):
     mock_get_config.return_value = "true"
     mock_lifetime.return_value = 604800
     
-    with patch('CTFd.plugins.ctfd_single_session.session_tracker.SSMSession') as mock_session_model:
+    with app.test_request_context(), patch('CTFd.plugins.ctfd_single_session.session_tracker.SSMSession') as mock_session_model:
+        mock_session_model.query.filter_by.return_value.first.return_value = None
         SessionTracker.register_session(1, "test-session-id")
         
         mock_session_model.assert_called_once()
@@ -19,7 +20,8 @@ def test_register_session(mock_lifetime, mock_get_config, mock_db):
         assert kwargs['user_id'] == 1
         assert kwargs['session_hash'] == hash_session_id("test-session-id")
         assert kwargs['cache_key'] == "sessiontest-session-id"
-        assert kwargs['is_active'] is True
+        assert mock_session_model.return_value.is_active is True
+        assert mock_session_model.return_value.pending_until is not None
         
         mock_db.session.add.assert_called_once()
         mock_db.session.commit.assert_called_once()

@@ -18,6 +18,8 @@ class SSMSession(db.Model):
     )
     session_hash = db.Column(db.String(64), nullable=False, unique=True)
     cache_key = db.Column(db.String(128), nullable=False)
+    lifecycle = db.Column(db.String(64), nullable=True)
+    pending_until = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(
         db.DateTime, nullable=False, default=datetime.datetime.utcnow
     )
@@ -35,15 +37,8 @@ class SSMSession(db.Model):
     @property
     def is_expired(self):
         """Check whether this session has exceeded the configured lifetime."""
-        from flask import current_app
-
-        lifetime = current_app.config.get("PERMANENT_SESSION_LIFETIME", 604800)
-        if hasattr(lifetime, "total_seconds"):
-            seconds = int(lifetime.total_seconds())
-        else:
-            seconds = int(lifetime)
-        expiry = self.created_at + datetime.timedelta(seconds=seconds)
-        return datetime.datetime.utcnow() > expiry
+        from .session_tracker import SessionTracker
+        return not SessionTracker.is_session_valid(self)
 
     def to_dict(self):
         return {

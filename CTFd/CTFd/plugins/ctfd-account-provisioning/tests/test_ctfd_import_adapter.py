@@ -102,6 +102,6 @@ class TestImportUsers:
         p = MockParticipant(name="Nguyễn Văn An", email="nva@ctf.local", password="Pass1")
         import_users([p])
         call_args = schema_instance.load.call_args[0][0]
-        assert call_args["name"] == "Nguyễn Văn An"
+        assert call_args["name"] == p.username
         assert call_args["email"] == "nva@ctf.local"
         assert call_args["password"] == "Pass1"

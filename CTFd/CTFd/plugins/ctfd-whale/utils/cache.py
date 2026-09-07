@@ -1,5 +1,6 @@
 import ipaddress
 import warnings
+from CTFd.plugins._lifecycle import lifecycle_lock
 from CTFd.cache import cache
 from CTFd.utils import get_config
 from flask_redis import FlaskRedis
@@ -19,17 +20,19 @@ class CacheProvider:
             self.init_port_sets()
 
     def init_port_sets(self):
-        self.clear()
+        with lifecycle_lock("whale-routing"):
+            self._init_port_sets()
+
+    def _init_port_sets(self):
 
         containers = DBContainer.get_all_container()
         used_port_list = []
         for container in containers:
-            if container.port != 0:
-                used_port_list.append(container.port)
-        for port in range(int(get_config("whale:frp_direct_port_minimum", 28000)),
-                          int(get_config("whale:frp_direct_port_maximum", 29000)) + 1):
-            if port not in used_port_list:
-                self.add_available_port(port)
+            if container.port:
+                used_port_list.append(int(container.port))
+            used_port_list.extend(int(p) for p in (container.ports or {}).values() if p)
+        available_ports = set(range(int(get_config("whale:frp_direct_port_minimum", 28000)),
+                                    int(get_config("whale:frp_direct_port_maximum", 29000)) + 1)) - set(used_port_list)
 
         from .docker import get_docker_client
         client = get_docker_client()
@@ -48,7 +51,7 @@ class CacheProvider:
             if str(network) not in exist_networks:
                 available_networks.append(str(network))
 
-        self.add_available_network_range(*set(available_networks))
+        self.replace_pools(available_ports, set(available_networks))
 
     def __getattr__(self, name):
         return self.provider.__getattribute__(name)
@@ -64,6 +67,10 @@ class FilesystemCacheProvider:
         self.key = 'ctfd_whale_lock-' + str(kwargs.get('user_id', 0))
         self.global_port_key = "ctfd_whale-port-set"
         self.global_network_key = "ctfd_whale-network-set"
+
+    def replace_pools(self, ports, networks):
+        cache.set(self.global_port_key, set(ports))
+        cache.set(self.global_network_key, set(networks))
 
     def clear(self):
         cache.set(self.global_port_key, set())
@@ -122,6 +129,15 @@ class RedisCacheProvider(FlaskRedis):
         self.global_port_key = "ctfd_whale-port-set"
         self.global_network_key = "ctfd_whale-network-set"
 
+    def replace_pools(self, ports, networks):
+        with self.pipeline(transaction=True) as pipeline:
+            pipeline.delete(self.global_port_key, self.global_network_key)
+            if ports:
+                pipeline.sadd(self.global_port_key, *ports)
+            if networks:
+                pipeline.sadd(self.global_network_key, *networks)
+            pipeline.execute()
+
     def clear(self):
         self.delete(self.global_port_key)
         self.delete(self.global_network_key)
@@ -136,7 +152,8 @@ class RedisCacheProvider(FlaskRedis):
         self.sadd(self.global_port_key, str(port))
 
     def get_available_port(self):
-        return int(self.spop(self.global_port_key))
+        port = self.spop(self.global_port_key)
+        return int(port) if port is not None else None
 
     def acquire_lock(self):
         lock = self.lock(name=self.key, timeout=10)

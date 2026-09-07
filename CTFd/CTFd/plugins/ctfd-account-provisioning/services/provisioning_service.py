@@ -5,7 +5,16 @@ Orchestrates the full workflow: parse → validate → preview → import → do
 
 import logging
 import secrets
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
+import datetime
+import io
+import base64
+from CTFd.plugins._lifecycle import lifecycle_lock
+from CTFd.models import db
+from CTFd.schemas.users import UserSchema
+from . import storage
+from .participant_validator import ParticipantRecord
+from .ctfd_import_adapter import ImportResult, ImportSuccess, ImportFailure
 
 from CTFd.models import Users
 
@@ -30,24 +39,15 @@ class PreviewData:
     error_message: str = ""
 
 
-# In-memory store for preview data, keyed by token.
-# This avoids storing plaintext passwords in the session cookie.
-# Entries are cleaned up after provisioning or on new upload.
-_preview_store = {}
-
-# In-memory store for generated credential documents, keyed by token.
-# Entries are cleaned up after download.
-_document_store = {}
-
-
 def cleanup_preview(token):
-    """Remove preview data from the store."""
-    _preview_store.pop(token, None)
+    with lifecycle_lock("provisioning"):
+        job = storage.get(token)
+        if job is not None and storage.decode(job)["state"] == "preview":
+            storage.delete(token)
 
 
 def cleanup_document(token):
-    """Remove document data from the store."""
-    _document_store.pop(token, None)
+    cleanup_preview(token)
 
 
 def process_upload(file_stream, email_domain="ctf.local"):
@@ -67,7 +67,7 @@ def process_upload(file_stream, email_domain="ctf.local"):
             error_message=parse_result.error_message,
         )
 
-    if not parse_result.players:
+    if not parse_result.players and not parse_result.errors:
         return PreviewData(
             token="",
             error_message="error_no_valid_players",
@@ -99,16 +99,27 @@ def process_upload(file_stream, email_domain="ctf.local"):
         email_domain=email_domain,
     )
 
-    # Step 5b: Check for email collisions with existing DB emails
+    # Check collisions against both the DB collation and this batch. Schema
+    # validation uses the same admin context as the real import, without commits.
+    allocated_emails = set()
     for participant in validation.participants:
-        if participant.status == "valid" and participant.email in existing_emails:
-            # Try to find a unique email by appending number
-            base_email = participant.email
-            counter = 2
-            while participant.email in existing_emails:
-                username_part = participant.username
-                participant.email = f"{username_part}{counter}@{email_domain}"
-                counter += 1
+        if participant.status != "valid":
+            continue
+        counter = 2
+        while (participant.email.casefold() in allocated_emails or
+               Users.query.filter_by(email=participant.email).first() is not None):
+            participant.email = f"{participant.username}{counter}@{email_domain}"
+            counter += 1
+        allocated_emails.add(participant.email.casefold())
+        response = UserSchema().load({"name": participant.username,
+                                      "email": participant.email,
+                                      "password": participant.password})
+        if response.errors:
+            participant.status = "invalid"
+            participant.error = "error_account_constraints"
+            participant.errors = response.errors
+    validation.valid_count = sum(p.status == "valid" for p in validation.participants)
+    validation.invalid_count = len(validation.participants) - validation.valid_count
 
     # Step 6: Generate a secure token and store preview data
     token = secrets.token_urlsafe(32)
@@ -119,51 +130,82 @@ def process_upload(file_stream, email_domain="ctf.local"):
         invalid_count=validation.invalid_count,
         total_count=validation.total_count,
     )
-    _preview_store[token] = preview
+    with lifecycle_lock("provisioning"):
+        storage.save(token, {"state": "preview", "participants": [asdict(p) for p in preview.participants]})
 
     return preview
 
 
+def _result(data):
+    return ImportResult(successful=[ImportSuccess(**p) for p in data['successful']],
+                        failed=[ImportFailure(**p) for p in data['failed']])
+
+
 def provision_accounts(token, lang="en"):
-    """
-    Execute account provisioning for previously previewed data.
-
-    :param token: Preview token from process_upload
-    :param lang: Language code for the credential document
-    :return: Tuple of (ImportResult, document_token or None)
-    """
-    preview = _preview_store.get(token)
-    if preview is None:
-        return None, None
-
-    # Import users into CTFd
-    import_result = import_users(preview.participants)
-
-    # Clean up preview data (contains plaintext passwords)
-    cleanup_preview(token)
-
-    # Generate credential document only for successfully created accounts
-    doc_token = None
-    if import_result.successful:
-        doc_output = generate_credential_document(
-            import_result.successful, lang=lang
-        )
-        doc_token = secrets.token_urlsafe(32)
-        _document_store[doc_token] = doc_output
-
-    return import_result, doc_token
+    # One job transaction includes users AND their encrypted recovery result.
+    # A killed worker rolls back both; retry never guesses ownership from names.
+    with lifecycle_lock("provisioning"):
+        db.session.rollback()
+        storage.cleanup_expired()
+        if db.engine.dialect.name == "sqlite":
+            # SQLite otherwise starts its first SAVEPOINT without an outer write
+            # transaction, making RELEASE commit accounts before the job result.
+            db.session.execute("BEGIN IMMEDIATE")
+        job = storage.get(token)
+        if job is None:
+            return None, None
+        data = storage.decode(job)
+        if data['state'] == 'preview':
+            participants = [ParticipantRecord(**p) for p in data['participants']]
+            try:
+                result = import_users(participants, commit=False)
+                data = {"state": "complete", "token": token, "successful": [asdict(p) for p in result.successful],
+                        "failed": [asdict(p) for p in result.failed], "lang": lang}
+                job.payload = storage.encode(data)
+                job.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=storage.ttl('document'))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                raise
+        result = _result(data)
+        # Rendering is deliberately deferred to download; a rendering failure
+        # cannot hide account-creation success and retries can recover credentials.
+        return result, token if result.successful else None
 
 
 def get_document(doc_token):
-    """
-    Retrieve a generated credential document.
-
-    :param doc_token: Document token from provision_accounts
-    :return: BytesIO object or None
-    """
-    return _document_store.get(doc_token)
+    with lifecycle_lock("provisioning"):
+        db.session.rollback()
+        storage.cleanup_expired()
+        job = storage.get(doc_token)
+        if job is None:
+            return None
+        data = storage.decode(job)
+        if data['state'] != 'complete' or not data['successful']:
+            return None
+        if 'document' not in data:
+            output = generate_credential_document(_result(data).successful, lang=data.get('lang', 'en'))
+            data['document'] = base64.b64encode(output.getvalue()).decode('ascii')
+            job.payload = storage.encode(data)
+            db.session.commit()
+        # Fresh stream for every GET; retries and concurrent downloads are safe.
+        return io.BytesIO(base64.b64decode(data['document']))
 
 
 def cleanup_after_download(doc_token):
-    """Clean up document data after download."""
-    cleanup_document(doc_token)
+    """Compatibility entry point: downloads no longer consume recovery data."""
+    with lifecycle_lock("provisioning"):
+        storage.cleanup_expired()
+
+
+def recoverable_documents():
+    from flask import session
+    with lifecycle_lock("provisioning"):
+        storage.cleanup_expired()
+        result = []
+        jobs = storage.ProvisioningJob.query.filter_by(owner_id=session.get('id')).order_by(storage.ProvisioningJob.expires_at.desc()).all()
+        for job in jobs:
+            data = storage.decode(job)
+            if data['state'] == 'complete' and data['successful']:
+                result.append({'token': data['token'], 'count': len(data['successful']), 'expires_at': job.expires_at})
+        return result

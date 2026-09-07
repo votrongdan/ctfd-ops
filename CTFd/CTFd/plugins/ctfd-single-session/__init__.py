@@ -14,6 +14,8 @@ from CTFd.plugins import (
 )
 from CTFd.utils import get_config, set_config
 
+import importlib
+from CTFd.plugins._lifecycle import additive_upgrade
 from .config import DEFAULTS, PLUGIN_NAME
 from .hooks import install_hooks
 from .routes import admin_blueprint
@@ -26,7 +28,8 @@ def load(app):
     # The import triggers SQLAlchemy model registration.
     from . import models  # noqa: F401
 
-    app.db.create_all()
+    migration = importlib.import_module(__name__ + ".migrations.0001_session_lifecycle")
+    additive_upgrade(PLUGIN_NAME, migration.revision, migration.upgrade)
 
     # Seed default configuration values on first install
     for key, value in DEFAULTS.items():

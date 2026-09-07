@@ -15,6 +15,18 @@
                 </div>
             </div>
 
+            {% if recovery_jobs %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>{{ 'Tải lại thông tin tài khoản' if lang == 'vi' else 'Recover credential documents' }}</h5>
+                    {% for job in recovery_jobs %}
+                    <p class="mb-1"><a href="{{ url_for('ctfd-account-provisioning.download', doc_token=job.token) }}">{{ t.download_button }} ({{ job.count }})</a>
+                    — {{ 'Hết hạn (UTC)' if lang == 'vi' else 'Expires (UTC)' }}: {{ job.expires_at }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {# Settings & Upload Section #}
             <div class="row mb-4">
                 {# Settings Card #}

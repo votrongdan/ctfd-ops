@@ -39,8 +39,8 @@ def install_hooks(app):
     import CTFd.utils.initialization as init_module
     import CTFd.utils.security.auth as auth_utils
 
-    _original_login_user = auth_utils.login_user
-    _original_logout_user = auth_utils.logout_user
+    _original_login_user = getattr(auth_utils.login_user, "_ssm_original", auth_utils.login_user)
+    _original_logout_user = getattr(auth_utils.logout_user, "_ssm_original", auth_utils.logout_user)
 
     # ---- wrapped login_user -------------------------------------------
 
@@ -90,6 +90,9 @@ def install_hooks(app):
                     EventService.create_multi_session_event(user.id, active)
         except Exception:
             logger.exception("[SSM] Error in wrapped_login_user")
+            if get_config(MODE_KEY, "monitoring") == MODE_BLOCK:
+                session.clear()
+                raise
 
     # ---- wrapped logout_user ------------------------------------------
 
@@ -104,6 +107,12 @@ def install_hooks(app):
             _original_logout_user()
 
     # ---- apply patches ------------------------------------------------
+
+    wrapped_login_user._ssm_original = _original_login_user
+    wrapped_logout_user._ssm_original = _original_logout_user
+    from .session_interface import TrackedSessionInterface
+    if not isinstance(app.session_interface, TrackedSessionInterface):
+        app.session_interface = TrackedSessionInterface(app.session_interface)
 
     auth_utils.login_user = wrapped_login_user
     auth_utils.logout_user = wrapped_logout_user

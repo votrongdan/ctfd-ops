@@ -64,4 +64,7 @@ TRANSLATIONS = {
     "error_no_preview_data": "Không tìm thấy dữ liệu xem trước. Vui lòng tải lên file trước.",
     "error_provision_failed": "Cấp phát tài khoản thất bại: {error}",
     "error_file_too_large": "File quá lớn. Kích thước tối đa là 5MB.",
+    "error_required_fields": 'Bắt buộc nhập Player ID và Name.',
+    "error_duplicate_player_id": 'Player ID bị trùng trong CSV.',
+    "error_account_constraints": 'Tài khoản không đáp ứng điều kiện username/email của CTFd.',
 }

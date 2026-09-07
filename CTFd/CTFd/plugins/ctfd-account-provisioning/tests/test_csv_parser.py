@@ -122,7 +122,7 @@ class TestCsvParser:
     def test_invalid_file_format(self):
         """Test error for non-csv file (binary)."""
         tmp = tempfile.NamedTemporaryFile(suffix=".csv", delete=False)
-        tmp.write(b"\\x00\\x01\\x02\\xffThis is not text")
+        tmp.write(b"\x00\x01\x02\xffThis is not text")
         tmp.close()
         try:
             with open(tmp.name, 'rb') as f:

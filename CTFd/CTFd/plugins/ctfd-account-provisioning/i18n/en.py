@@ -64,4 +64,7 @@ TRANSLATIONS = {
     "error_no_preview_data": "No preview data found. Please upload a file first.",
     "error_provision_failed": "Account provisioning failed: {error}",
     "error_file_too_large": "File is too large. Maximum size is 5MB.",
+    "error_required_fields": 'Player ID and Name are required.',
+    "error_duplicate_player_id": 'Duplicate Player ID in this CSV.',
+    "error_account_constraints": 'Account does not satisfy CTFd username/email constraints.',
 }

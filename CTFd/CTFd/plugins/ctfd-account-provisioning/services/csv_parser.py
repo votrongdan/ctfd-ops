@@ -72,6 +72,7 @@ def parse_csv(file_stream):
             
         players = []
         errors = []
+        seen_ids = set()
         
         for row_num, row in enumerate(reader, start=2):
             if not row:
@@ -91,6 +92,14 @@ def parse_csv(file_stream):
                 })
                 continue
                 
+            if not name_value.strip() or not player_id_value.strip():
+                errors.append({"row": row_num, "error": "error_required_fields"})
+                continue
+            identity = player_id_value.strip().casefold()
+            if identity in seen_ids:
+                errors.append({"row": row_num, "error": "error_duplicate_player_id"})
+                continue
+            seen_ids.add(identity)
             name = str(name_value).strip()
             player_id = str(player_id_value).strip()
             players.append(ParsedPlayer(row_number=row_num, player_id=player_id, name=name))

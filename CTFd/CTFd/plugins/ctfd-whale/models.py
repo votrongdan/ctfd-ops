@@ -90,61 +90,29 @@ class WhaleContainer(db.Model):
             'whale:template_chall_flag', '{{ "flag{"+uuid.uuid4()|string+"}" }}'
         )).render(container=self, uuid=uuid, random=random, get_config=get_config)
 
+    def _render_rules(self, attribute):
+        from .utils.redirects import rules_for, RuleContainer
+        rendered = []
+        for port, kind in rules_for(self.challenge):
+            template = WhaleRedirectTemplate.query.filter_by(key=kind).first()
+            if template:
+                view = RuleContainer(self, port, kind) if self.challenge.redirect_rules else self
+                content = Template(getattr(template, attribute)).render(
+                    container=view, get_config=get_config, rule_port=port)
+                if attribute == "frp_template" and self.challenge.redirect_rules:
+                    # Keep custom template contents, but namespace every INI section.
+                    import re
+                    content = re.sub(r"(?m)^\[([^]\n]+)\]", lambda m: "[" + m[1] + "_" + port + "]", content)
+                rendered.append(content)
+        return ("<br>" if attribute == "access_template" else "\n").join(rendered)
+
     @property
     def user_access(self):
-        if self.challenge.redirect_rules:
-            access_strs = []
-            rules = [r.strip() for r in self.challenge.redirect_rules.split(",") if r.strip()]
-            for rule in rules:
-                if "/" in rule:
-                    port, rtype = rule.split("/", 1)
-                    template = WhaleRedirectTemplate.query.filter_by(key=rtype).first()
-                    if template:
-                        # For direct type, we use the allocated port for this specific internal port
-                        # The template might use container.port, but we can override it temporarily
-                        # or just let the template render and we replace it, or better, pass port mapping
-                        original_port = self.port
-                        if rtype == "direct" and self.ports and port in self.ports:
-                            self.port = self.ports[port]
-                        
-                        rendered = Template(template.access_template).render(container=self, get_config=get_config, rule_port=port)
-                        access_strs.append(rendered)
-                        
-                        self.port = original_port
-            return "<br>".join(access_strs)
-
-        return Template(WhaleRedirectTemplate.query.filter_by(
-            key=self.challenge.redirect_type
-        ).first().access_template).render(container=self, get_config=get_config)
+        return self._render_rules("access_template")
 
     @property
     def frp_config(self):
-        if self.challenge.redirect_rules:
-            config_strs = []
-            rules = [r.strip() for r in self.challenge.redirect_rules.split(",") if r.strip()]
-            for rule in rules:
-                if "/" in rule:
-                    port, rtype = rule.split("/", 1)
-                    template = WhaleRedirectTemplate.query.filter_by(key=rtype).first()
-                    if template:
-                        original_port = self.port
-                        if rtype == "direct" and self.ports and port in self.ports:
-                            self.port = self.ports[port]
-                            
-                        # FRP config template usually uses container.uuid, we need to append the port to avoid duplicate names
-                        rendered = Template(template.frp_template).render(container=self, get_config=get_config)
-                        # Quick hack: replace the rule name [rtype_userid_uuid] with [rtype_userid_uuid_port]
-                        rule_name_prefix = f"[{rtype}_{self.user_id}_{self.uuid}"
-                        if rule_name_prefix + "]" in rendered:
-                            rendered = rendered.replace(rule_name_prefix + "]", rule_name_prefix + f"_{port}]")
-                        
-                        config_strs.append(rendered)
-                        self.port = original_port
-            return "\n".join(config_strs)
-
-        return Template(WhaleRedirectTemplate.query.filter_by(
-            key=self.challenge.redirect_type
-        ).first().frp_template).render(container=self, get_config=get_config)
+        return self._render_rules("frp_template")
 
     def __repr__(self):
         return "<WhaleContainer ID:{0} {1} {2} {3} {4}>".format(self.id, self.user_id, self.challenge_id,

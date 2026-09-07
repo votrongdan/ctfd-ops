@@ -164,6 +164,11 @@
     if (cancelBtn) {
         cancelBtn.addEventListener("click", function () {
             previewSection.classList.add("d-none");
+            if (previewToken) {
+                fetch("/plugins/ctfd-account-provisioning/admin/preview/" + previewToken, {
+                    method: "DELETE", headers: {"CSRF-Token": getNonce(), "Content-Type": "application/json"}, body: "{}"
+                }).catch(function () { /* TTL still guarantees expiry. */ });
+            }
             previewToken = null;
             csvFile.value = "";
         });

@@ -65,7 +65,7 @@ class ImportResult:
         return self.total_failed == 0
 
 
-def import_users(participants):
+def import_users(participants, commit=True):
     """
     Import a list of validated participants into CTFd using the same
     logic as CTFd's load_users_csv() function.
@@ -129,9 +129,15 @@ def import_users(participants):
         user.verified = True
         user.hidden = False
 
-        db.session.add(user)
+        savepoint = db.session.begin_nested() if not commit else None
         try:
-            db.session.commit()
+            db.session.add(user)
+            if commit:
+                db.session.commit()
+            else:
+                db.session.flush()
+            if savepoint is not None:
+                savepoint.commit()
             result.successful.append(ImportSuccess(
                 index=i,
                 name=participant.name,
@@ -146,7 +152,10 @@ def import_users(participants):
                 user.id,
             )
         except Exception as e:
-            db.session.rollback()
+            if savepoint is not None:
+                savepoint.rollback()
+            else:
+                db.session.rollback()
             logger.error(
                 "Database error creating user '%s': %s",
                 participant.username,

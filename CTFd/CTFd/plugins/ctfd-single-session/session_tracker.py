@@ -6,6 +6,7 @@ import hashlib
 from flask import current_app
 
 from CTFd.cache import cache
+from CTFd.plugins._lifecycle import lifecycle_lock
 from CTFd.models import db
 from CTFd.utils import get_config
 
@@ -56,131 +57,66 @@ class SessionTracker:
 
     @staticmethod
     def register_session(user_id, session_id):
-        """Record a new session after successful login (Monitoring Mode)."""
-        sid_hash = hash_session_id(session_id)
-        ck = "session" + session_id
+        with lifecycle_lock("ssm-user-" + str(user_id)):
+            return SessionTracker._register(user_id, session_id)
 
+    @staticmethod
+    def _register(user_id, session_id):
         now = datetime.datetime.utcnow()
-
-        record = SSMSession(
-            user_id=user_id,
-            session_hash=sid_hash,
-            cache_key=ck,
-            created_at=now,
-            last_seen_at=now,
-            is_active=True,
-        )
-        db.session.add(record)
-        try:
-            db.session.commit()
-            
-            # Bind this session to the current application lifecycle
-            cache.set(
-                f"ssm:lifecycle:{ck}", 
-                get_app_lifecycle_id(), 
-                timeout=get_session_lifetime()
-            )
-        except Exception:
-            db.session.rollback()
-            raise
+        sid_hash = hash_session_id(session_id)
+        record = SSMSession.query.filter_by(session_hash=sid_hash).first()
+        if record is None:
+            record = SSMSession(user_id=user_id, session_hash=sid_hash,
+                                cache_key=current_app.session_interface.key_prefix + session_id,
+                                created_at=now, last_seen_at=now)
+            db.session.add(record)
+        record.user_id = user_id
+        record.is_active = True
+        record.lifecycle = get_app_lifecycle_id()
+        # An unsaved login is a reservation, not a dead session. The response
+        # adapter must complete it before the deadline or discard the login.
+        record.pending_until = now + datetime.timedelta(seconds=60)
+        db.session.commit()
         return record
 
     @staticmethod
-    def is_session_valid(session_record):
-        """
-        Determine if a tracked session is genuinely still active.
-        This reconciles the plugin database state with CTFd's actual cache backend.
-        If CTFd restarts and the cache is wiped, this correctly identifies stale DB records.
-        """
-        from flask import session
-        
-        now = datetime.datetime.utcnow()
-        cutoff = now - datetime.timedelta(seconds=get_session_lifetime())
-        if session_record.created_at <= cutoff:
+    def is_session_valid(record):
+        if not record.is_active:
             return False
-            
-        # If this is the session currently processing the request, it is definitely valid.
-        # (Flask-Session hasn't saved it to Redis yet, so the cache lookup below would falsely fail).
-        if hasattr(session, "sid") and session.sid:
-            if session_record.session_hash == hash_session_id(session.sid):
-                return True
-                
-        # Verify it belongs to the current app lifecycle (SECRET_KEY matches)
-        # If SECRET_KEY changes on restart, old cookies (and their Redis sessions) are orphaned
-        session_lifecycle = cache.get(f"ssm:lifecycle:{session_record.cache_key}")
-        if session_lifecycle != get_app_lifecycle_id():
-            return False
-            
-        # Verify the session still exists in CTFd's session store (Redis/Filesystem)
-        return cache.get(session_record.cache_key) is not None
+        lifecycle = record.lifecycle or cache.get("ssm:lifecycle:" + record.cache_key)
+        if lifecycle != get_app_lifecycle_id():
+            # Backfill legacy records only when this request proves cookie validity.
+            from flask import has_request_context, session
+            if not (record.lifecycle is None and has_request_context()
+                    and getattr(session, "sid", None)
+                    and record.session_hash == hash_session_id(session.sid)
+                    and session.get("id") == record.user_id):
+                return False
+        # A request opened before cache expiry may legitimately refresh its
+        # session, unless it was revoked or is an expired login reservation.
+        from flask import has_request_context, session
+        if (record.pending_until is None and has_request_context()
+                and getattr(session, 'sid', None)
+                and record.session_hash == hash_session_id(session.sid)
+                and session.get('id') == record.user_id):
+            return True
+        raw = cache.get(record.cache_key)
+        if raw is not None:
+            try:
+                data = current_app.session_interface.serializer.loads(raw)
+                if data.get("id") == record.user_id:
+                    return True
+            except (ValueError, TypeError):
+                pass
+        return bool(record.pending_until and record.pending_until > datetime.datetime.utcnow())
 
     @staticmethod
     def register_session_atomic(user_id, session_id):
-        """
-        Atomically check for existing active sessions and register a new one.
-
-        Used in Block Mode to prevent race conditions where two simultaneous
-        logins could both pass the before_request gate.
-
-        Returns:
-            (SSMSession, False) on success.
-            (None, True) if an active session already exists (blocked).
-        """
-        sid_hash = hash_session_id(session_id)
-        ck = "session" + session_id
-        now = datetime.datetime.utcnow()
-
-        # Attempt row-level locking (MySQL / PostgreSQL)
-        try:
-            existing = (
-                SSMSession.query
-                .filter_by(user_id=user_id, is_active=True)
-                .with_for_update()
-                .all()
-            )
-        except Exception:
-            # SQLite does not support FOR UPDATE — fall back to plain query
-            existing = (
-                SSMSession.query
-                .filter_by(user_id=user_id, is_active=True)
-                .all()
-            )
-
-        # Reconcile stale sessions while we hold the lock
-        active = []
-        for s in existing:
-            if not SessionTracker.is_session_valid(s):
-                s.is_active = False
-            else:
-                active.append(s)
-
-        if active:
-            # Another session is still valid — reject this login
-            db.session.commit()
-            return None, True
-
-        record = SSMSession(
-            user_id=user_id,
-            session_hash=sid_hash,
-            cache_key=ck,
-            created_at=now,
-            last_seen_at=now,
-            is_active=True,
-        )
-        db.session.add(record)
-        try:
-            db.session.commit()
-            
-            # Bind this session to the current application lifecycle
-            cache.set(
-                f"ssm:lifecycle:{ck}", 
-                get_app_lifecycle_id(), 
-                timeout=get_session_lifetime()
-            )
-        except Exception:
-            db.session.rollback()
-            raise
-        return record, False
+        with lifecycle_lock("ssm-user-" + str(user_id)):
+            db.session.rollback()  # no stale snapshot from the pre-login gate
+            if SessionTracker.has_active_session(user_id):
+                return None, True
+            return SessionTracker._register(user_id, session_id), False
 
     # ------------------------------------------------------------------
     # Removal
@@ -321,14 +257,13 @@ class SessionTracker:
     @staticmethod
     def cleanup_expired():
         """Mark all expired sessions as inactive. Returns count cleaned."""
-        now = datetime.datetime.utcnow()
-        cutoff = now - datetime.timedelta(seconds=get_session_lifetime())
-        updated = SSMSession.query.filter(
-            SSMSession.is_active == True,  # noqa: E712
-            SSMSession.created_at <= cutoff,
-        ).update({"is_active": False})
+        count = 0
+        for record in SSMSession.query.filter_by(is_active=True).all():
+            if not SessionTracker.is_session_valid(record):
+                record.is_active = False
+                count += 1
         db.session.commit()
-        return updated
+        return count
 
     # ------------------------------------------------------------------
     # Admin actions
@@ -336,25 +271,25 @@ class SessionTracker:
 
     @staticmethod
     def force_logout_session(session_record_id):
-        """Force-logout a single session by its DB id."""
         record = SSMSession.query.get(session_record_id)
-        if not record or not record.is_active:
+        if record is None:
             return False
-        cache.delete(record.cache_key)
-        record.is_active = False
-        db.session.commit()
-        return True
+        user_id = record.user_id
+        with lifecycle_lock("ssm-user-" + str(user_id)):
+            db.session.rollback()
+            record = SSMSession.query.get(session_record_id)
+            if not record or not record.is_active:
+                return False
+            cache.delete(record.cache_key)
+            cache.delete("ssm:lifecycle:" + record.cache_key)
+            record.is_active = False
+            record.pending_until = None
+            db.session.commit()
+            return True
 
     @staticmethod
     def force_logout_all(user_id):
-        """Force-logout every active session for a user."""
-        sessions = SSMSession.query.filter_by(
-            user_id=user_id, is_active=True
-        ).all()
-        count = 0
-        for s in sessions:
-            cache.delete(s.cache_key)
-            s.is_active = False
-            count += 1
-        db.session.commit()
-        return count
+        with lifecycle_lock("ssm-user-" + str(user_id)):
+            db.session.rollback()
+            ids = [r.id for r in SSMSession.query.filter_by(user_id=user_id, is_active=True).all()]
+            return sum(SessionTracker.force_logout_session(i) for i in ids)

@@ -16,6 +16,18 @@ def load(app):
 
     :param app: Flask application instance
     """
+    from .models import ProvisioningJob
+    from CTFd.plugins._lifecycle import lifecycle_lock
+    with lifecycle_lock("plugin-schema"):
+        ProvisioningJob.__table__.create(bind=app.db.engine, checkfirst=True)
+
+    @app.cli.command("provisioning-cleanup")
+    def provisioning_cleanup():
+        """Remove expired encrypted provisioning jobs."""
+        from .services.storage import cleanup_expired
+        with lifecycle_lock("provisioning"):
+            cleanup_expired()
+
     plugin_name = __name__.split(".")[-1]
 
     # Initialize default configuration values
