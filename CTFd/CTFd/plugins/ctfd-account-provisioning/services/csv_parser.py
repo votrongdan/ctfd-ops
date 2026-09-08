@@ -13,7 +13,7 @@ logger = logging.getLogger("ctfd-account-provisioning")
 
 @dataclass
 class ParsedPlayer:
-    """Represents a single parsed player from the Excel file."""
+    """Represents a single parsed player from the CSV file."""
     row_number: int
     player_id: str
     name: str

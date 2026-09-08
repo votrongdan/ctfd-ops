@@ -172,7 +172,7 @@ Ultimate-CTF-Platform/
 │   ├── installation.md                # Hướng dẫn cài đặt
 │   └── architecture.md                # Tài liệu kiến trúc
 ├── CTFd/                              # CTFd core (fork)
-│   ├── docker-compose.yml             # Docker Compose config (6 services)
+│   ├── docker-compose.yml             # Docker Compose config (7 services)
 │   ├── Dockerfile                     # Multi-stage build cho CTFd
 │   ├── docker-entrypoint.sh           # Entrypoint: DB migration + Gunicorn
 │   ├── conf/

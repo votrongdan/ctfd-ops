@@ -1,13 +1,13 @@
 # CTFd Account Provisioning Plugin
 
-Automate player account creation for offline CTF competitions. Upload an Excel file with player names → the plugin generates usernames, passwords, imports accounts into CTFd, and produces a printable Word document with login credentials.
+Automate player account creation for offline CTF competitions. Upload a CSV file with player IDs and names → the plugin generates usernames, passwords, imports accounts into CTFd, and produces a printable Word document with login credentials.
 
 ## Features
 
-- **Single-upload workflow**: Upload an Excel list of names → preview → confirm → download credentials
-- **Automatic username generation**: Converts Unicode/Vietnamese names to ASCII usernames (e.g., `Nguyễn Văn An` → `nguyen_van_an`)
+- **Single-upload workflow**: Upload a CSV list of players → preview → confirm → download credentials
+- **Automatic username generation**: Converts Unicode/Vietnamese names to ASCII usernames combined with player ID (e.g., `Nguyễn Văn An` + `P001` → `nguyen_van_an_p001`)
 - **Secure password generation**: Cryptographically secure, human-typeable passwords using Python `secrets`
-- **Duplicate handling**: Automatic numbering for duplicate names (`nguyen_van_an`, `nguyen_van_an2`)
+- **Duplicate handling**: Automatic numbering for duplicate names (`nguyen_van_an_p001`, `nguyen_van_an_p001_1`)
 - **CTFd-native import**: Uses CTFd's own `UserSchema` validation and database operations
 - **Printable credential cards**: Generates a Word document with bordered cards containing name, username, and password
 - **Bilingual support**: Full Vietnamese and English interface and document generation
@@ -16,8 +16,8 @@ Automate player account creation for offline CTF competitions. Upload an Excel f
 ## Requirements
 
 - CTFd 3.x (tested with 3.8.6)
-- Python 3.8+
-- Additional Python packages: `openpyxl`, `python-docx`
+- Python 3.11+
+- Additional Python packages: `python-docx>=1.1.0`
 
 ## Installation
 
@@ -30,24 +30,24 @@ cp -r ctfd-account-provisioning /path/to/CTFd/CTFd/plugins/
 2. Install dependencies:
 
 ```bash
-pip install openpyxl python-docx
+pip install python-docx
 ```
 
 3. Restart CTFd. The plugin will be loaded automatically.
 
 4. Access the plugin at **Admin Panel → Plugins → Account Provisioning** (or directly at `/plugins/ctfd-account-provisioning/admin`).
 
-## Input Excel Format
+## Input CSV Format
 
-The input file must be an `.xlsx` file with a column named **`Name`** (case-insensitive):
+The input file must be a `.csv` file with two columns: **`Player ID`** and **`Name`** (case-insensitive headers):
 
-| Name |
-|---|
-| Nguyễn Văn An |
-| Trần Thị Bình |
-| Lê Quốc Việt |
-| John Smith |
-| Alice Johnson |
+| Player ID | Name |
+|---|---|
+| P001 | Nguyễn Văn An |
+| P002 | Trần Thị Bình |
+| P003 | Lê Quốc Việt |
+| P004 | John Smith |
+| P005 | Alice Johnson |
 
 A sample file can be generated using:
 
@@ -57,20 +57,21 @@ python create_sample.py
 ```
 
 ### Validation Rules
-- File must be a valid `.xlsx` file
-- Must contain a `Name` column
+- File must be a valid `.csv` file (UTF-8 encoding, BOM supported)
+- Must contain both `Player ID` and `Name` columns
 - Empty rows are ignored
 - Leading/trailing whitespace is trimmed
-- Empty names in non-empty rows produce errors
+- Rows with empty Name or Player ID produce errors
+- Duplicate Player IDs within the file produce errors
 
 ## Username Generation
 
-| Display Name | Generated Username |
-|---|---|
-| Nguyễn Văn An | `nguyen_van_an` |
-| Đặng Thị Hương | `dang_thi_huong` |
-| Trần Quốc Việt | `tran_quoc_viet` |
-| John Smith | `john_smith` |
+| Player ID | Display Name | Generated Username |
+|---|---|---|
+| P001 | Nguyễn Văn An | `nguyen_van_an_p001` |
+| P002 | Đặng Thị Hương | `dang_thi_huong_p002` |
+| P003 | Trần Quốc Việt | `tran_quoc_viet_p003` |
+| P004 | John Smith | `john_smith_p004` |
 
 **Algorithm:**
 1. Replace Vietnamese `đ`/`Đ` → `d`/`D`
@@ -79,8 +80,10 @@ python create_sample.py
 4. Replace spaces, hyphens, dots → underscores
 5. Remove all non-`[a-z0-9_]` characters
 6. Collapse consecutive underscores
+7. Strip leading/trailing underscores
+8. Append `_{safe_player_id}` (player ID sanitized with same rules)
 
-**Duplicate handling:** Second `Nguyễn Văn An` becomes `nguyen_van_an2`, third becomes `nguyen_van_an3`, etc. Checks both existing database users and the current batch.
+**Duplicate handling:** If `nguyen_van_an_p001` already exists (in DB or current batch), the plugin appends a counter: `nguyen_van_an_p001_1`, `nguyen_van_an_p001_2`, etc.
 
 ## Password Generation
 
@@ -105,7 +108,7 @@ The `Users` model automatically hashes passwords via its `@validates('password')
 
 CTFd's `UserSchema` requires a valid email. Since offline competitions typically don't use real emails, the plugin auto-generates placeholder emails:
 
-- Format: `{username}@{domain}` (e.g., `nguyen_van_an@ctf.local`)
+- Format: `{username}@{domain}` (e.g., `nguyen_van_an_p001@ctf.local`)
 - Domain is configurable in the settings panel (default: `ctf.local`)
 - No real emails are sent
 
@@ -132,11 +135,11 @@ After account creation, a `.docx` file is generated with printable credential ca
 |---|---|
 | Authorization | `@admins_only` on all routes |
 | CSRF | Nonce in forms, `CSRF-Token` header for AJAX |
-| File validation | Extension check + openpyxl validation |
+| File validation | Extension check + CSV format validation |
 | Password storage | Hashed via bcrypt_sha256 (CTFd's mechanism) |
 | No password logging | Passwords never written to logs |
 | No DB plaintext | Passwords only in memory during request lifecycle |
-| Temp data | In-memory stores with secure random tokens; cleaned after use |
+| Temp data | Encrypted database storage (Fernet) with TTL expiration; auto-cleanup |
 | File size | 5MB upload limit |
 
 ## Testing
@@ -148,8 +151,8 @@ Run tests with pytest from the CTFd root directory:
 pytest CTFd/plugins/ctfd-account-provisioning/tests/test_username_generator.py -v
 pytest CTFd/plugins/ctfd-account-provisioning/tests/test_password_generator.py -v
 
-# Excel parser tests
-pytest CTFd/plugins/ctfd-account-provisioning/tests/test_excel_parser.py -v
+# CSV parser tests
+pytest CTFd/plugins/ctfd-account-provisioning/tests/test_csv_parser.py -v
 
 # Document generator tests
 pytest CTFd/plugins/ctfd-account-provisioning/tests/test_document_generator.py -v
@@ -167,19 +170,21 @@ pytest CTFd/plugins/ctfd-account-provisioning/tests/ -v
 ctfd-account-provisioning/
 ├── __init__.py                  # Plugin entry point
 ├── config.py                    # Default settings
+├── models.py                    # ProvisioningJob DB model (encrypted storage)
 ├── routes.py                    # Admin routes (upload/preview/provision/download)
-├── create_sample.py             # Generate sample Excel
+├── create_sample.py             # Generate sample CSV
 ├── requirements.txt             # Python dependencies
 ├── README.md                    # This file
 ├── services/
 │   ├── __init__.py
-│   ├── excel_parser.py          # Parse .xlsx input
+│   ├── csv_parser.py            # Parse .csv input (Player ID + Name)
 │   ├── username_generator.py    # Unicode → ASCII username
 │   ├── password_generator.py    # Secure random passwords
 │   ├── participant_validator.py # Combine and validate data
 │   ├── ctfd_import_adapter.py   # CTFd UserSchema-based import
 │   ├── provisioning_service.py  # Orchestrate workflow
-│   └── document_generator.py    # Generate .docx credentials
+│   ├── document_generator.py    # Generate .docx credentials
+│   └── storage.py               # Encrypted DB persistence (Fernet + TTL)
 ├── i18n/
 │   ├── __init__.py              # Translation service
 │   ├── en.py                    # English strings
@@ -189,10 +194,10 @@ ctfd-account-provisioning/
 ├── assets/
 │   └── provisioning.js
 ├── sample/
-│   └── sample_players.xlsx      # Generated by create_sample.py
+│   └── sample_players.csv       # Generated by create_sample.py
 └── tests/
     ├── __init__.py
-    ├── test_excel_parser.py
+    ├── test_csv_parser.py
     ├── test_username_generator.py
     ├── test_password_generator.py
     ├── test_ctfd_import_adapter.py

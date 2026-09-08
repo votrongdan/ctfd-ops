@@ -353,6 +353,7 @@ ctfd-account-provisioning/
 ├── __init__.py                    # Plugin load
 ├── config.py                      # Default configs
 ├── routes.py                      # Blueprint: upload, provision, download
+├── models.py                      # ProvisioningJob model (encrypted DB storage)
 ├── services/
 │   ├── csv_parser.py              # Parse CSV (Player ID + Name)
 │   ├── username_generator.py      # Unicode → ASCII username
@@ -360,7 +361,8 @@ ctfd-account-provisioning/
 │   ├── participant_validator.py   # Validation + email generation
 │   ├── ctfd_import_adapter.py     # CTFd UserSchema import
 │   ├── document_generator.py     # Word .docx generation
-│   └── provisioning_service.py   # Orchestrator
+│   ├── provisioning_service.py   # Orchestrator
+│   └── storage.py                # Encrypted DB persistence (ProvisioningJob)
 ├── i18n/                          # EN + VI translations
 ├── templates/                     # Admin UI
 └── assets/                        # CSS/JS
@@ -403,7 +405,7 @@ flowchart TD
 
 **Document Generator** (`document_generator.py`): Tạo file Word (.docx) bằng `python-docx`. Mỗi account là 1 table card với header, name, username, password, note.
 
-**Storage**: Preview data và document output lưu in-memory (`_preview_store`, `_document_store`). Nếu CTFd restart, data mất. Cleanup sau khi provision hoặc download.
+**Storage**: Preview data và document output lưu trong database (bảng `account_provisioning_jobs`) dưới dạng encrypted blob (Fernet). Encryption key được tự động sinh và lưu tại `UPLOAD_FOLDER/.account-provisioning.key`, hoặc có thể set qua config `ACCOUNT_PROVISIONING_KEY`. Data có TTL (preview: 1 giờ, document: 24 giờ mặc định) và tự động cleanup khi hết hạn. Data persist qua CTFd restart.
 
 ---
 
@@ -572,9 +574,13 @@ Template không hardcode flag. `entrypoint.sh` hoặc application code đọc `$
 | `ssm_sessions` | Active sessions (user_id, session_hash, cache_key, is_active, last_seen_at) |
 | `ssm_events` | Security events (event_type, session_count, resolved) |
 
-### Account Provisioning
+### Account Provisioning models
 
-Plugin này **không tạo bảng riêng**. Sử dụng trực tiếp CTFd `Users` model qua `UserSchema`.
+| Bảng | Mô tả |
+|---|---|
+| `account_provisioning_jobs` | Encrypted provisioning job data (token_hash, owner_id, payload, expires_at) |
+
+Plugin sử dụng CTFd `Users` model qua `UserSchema` để tạo user accounts, và lưu trạng thái preview/document tạm thời trong bảng riêng với encryption (Fernet) và TTL tự động.
 
 ---
 

@@ -35,8 +35,8 @@ def validate_and_prepare(parsed_players, parse_errors, usernames, passwords,
     Combine parsed players with generated usernames, passwords, and emails
     into validated ParticipantRecords.
 
-    :param parsed_players: List of ParsedPlayer objects from excel_parser
-    :param parse_errors: List of error dicts from excel_parser
+    :param parsed_players: List of ParsedPlayer objects from csv_parser
+    :param parse_errors: List of error dicts from csv_parser
     :param usernames: List of generated usernames (same order as parsed_players)
     :param passwords: List of generated passwords (same order as parsed_players)
     :param email_domain: Domain for auto-generated email addresses
