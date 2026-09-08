@@ -1,0 +1,34 @@
+name: "Echo Overwrite 101"
+author: "Antigravity"
+attribution: "Antigravity"
+category: "Pwn"
+description: |
+  Welcome to binary exploitation!
+  In this challenge, your goal is to trigger the `win()` function inside the compiled binary by overflowing a stack buffer.
+  
+  Can you overwrite the target variable and capture the flag?
+
+value: 500
+type: dynamic_docker
+
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: pwn_hello_overflow-challenge:latest
+  redirect_type: http
+  redirect_port: 80
+
+image: .
+
+files:
+  - src/chall.c
+
+tags:
+  - pwn
+  - buffer-overflow
+  - binary-exploitation
+  - easy
+
+state: visible
+version: "0.1"

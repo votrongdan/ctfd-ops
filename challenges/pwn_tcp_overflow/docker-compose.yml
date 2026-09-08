@@ -1,0 +1,9 @@
+version: "3"
+services:
+  challenge:
+    build: .
+    image: pwn_tcp_overflow-challenge:latest
+    ports:
+      - "1337:1337"
+    environment:
+      - FLAG=flag{tcp_d1r3c7_pwn_v14_n37c47_9b81a2}

@@ -1,0 +1,39 @@
+name: "Web2SSH"
+author: "Antigravity"
+category: "Web"
+description: |
+  Welcome to **Web2SSH**!
+
+  In this challenge, your isolated per-user container hosts two active services:
+  - **Web Service (HTTP):** Click the **Website Link** provided in your CTFd Instance Info below.
+  - **SSH Service (Port 22):** Connect via SSH using the host and mapped port shown in your CTFd Instance Info (`ssh ctf@<host> -p <ssh_port>`).
+
+  **Intended Solve Path:**
+  1. Click the website link to inspect the application and discover the SSH login clue.
+  2. Use the clue to identify the SSH username and password.
+  3. SSH into your container instance (`ssh ctf@<host> -p <ssh_port>`).
+  4. Read `/home/ctf/flag.txt` inside your container to retrieve your unique flag.
+
+  *Note: Each player gets a completely isolated container with a unique, randomly injected flag.*
+
+value: 500
+type: dynamic_docker
+
+extra:
+  initial: 500
+  decay: 100
+  minimum: 50
+  docker_image: web2ssh-challenge:latest
+  redirect_rules: "8080/http,22/direct"
+
+image: .
+
+tags:
+  - web
+  - ssh
+  - beginner
+  - ctfd-whale
+  - isolated-container
+
+state: visible
+version: "0.1"

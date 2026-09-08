@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packet Inspector 101 - Forensics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(18, 26, 43, 0.75);
+            --accent-purple: #c084fc;
+            --accent-pink: #f472b6;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-glow: rgba(192, 132, 252, 0.25);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top, #231633 0%, #0b0f19 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; width: 100%; }
+        header { text-align: center; margin-bottom: 2.5rem; }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle { color: var(--text-muted); font-size: 1.1rem; }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-purple);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(192, 132, 252, 0.4); }
+        .terminal {
+            background: #050811;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'Fira Code', monospace;
+            color: #c084fc;
+            min-height: 150px;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        input[type="text"] {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            margin-top: 0.5rem;
+        }
+        input[type="text"]:focus { outline: 1px solid var(--accent-purple); }
+        .badge {
+            background: rgba(192, 132, 252, 0.1);
+            color: var(--accent-purple);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-glow);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Forensics</span>
+            <h1>Packet Inspector 101</h1>
+            <p class="subtitle">Aegis Cyber Security Network Capture Analysis</p>
+        </header>
+
+        <div class="card">
+            <div class="card-title">📡 Network Capture Investigation</div>
+            <p style="margin-bottom: 1rem; line-height: 1.6;">
+                Our network intrusion detection sensors captured suspicious HTTP traffic exchanged between host <code>192.168.1.105</code> and authentication server <code>10.0.0.42</code>.
+                Download the packet capture file <code>evidence.pcap</code> and analyze it using <b>Wireshark</b>, <b>tshark</b>, <b>strings</b>, or <b>Python</b> to retrieve the authentication secret!
+            </p>
+            <a href="/download/evidence.pcap" class="btn">⬇️ Download Capture (evidence.pcap)</a>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔎 Quick Web Packet Search</div>
+            <p style="font-size: 0.95rem; color: var(--text-muted);">
+                Search printable text strings directly inside the uploaded packet capture.
+            </p>
+            
+            <label style="display: block; margin-top: 1rem; font-weight: 600;">Filter Query (e.g., flag, HTTP, POST, admin):</label>
+            <input type="text" id="queryInput" placeholder="flag" value="flag">
+            
+            <div style="margin-top: 0.75rem;">
+                <button class="btn" onclick="searchPackets()">🔍 Search Strings</button>
+            </div>
+
+            <div class="terminal" id="terminalOutput">=== PCAP String Search Console ===
+Click "Search Strings" to view extracted packets.</div>
+        </div>
+    </div>
+
+    <script>
+        async function searchPackets() {
+            const query = document.getElementById("queryInput").value;
+            const term = document.getElementById("terminalOutput");
+            term.textContent = "Searching PCAP data...\n";
+
+            try {
+                const res = await fetch("/api/search_pcap?query=" + encodeURIComponent(query));
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    term.textContent = data.results.join("\n----------------------------------------\n");
+                } else {
+                    term.textContent = "No matching string chunks found.";
+                }
+            } catch (err) {
+                term.textContent = "Error searching PCAP: " + err;
+            }
+        }
+    </script>
+</body>
+</html>

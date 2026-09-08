@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trinity Recon</title>
+    <style>
+        :root {
+            --bg-primary: #050b14;
+            --bg-card: rgba(10, 20, 35, 0.85);
+            --accent-green: #00ff66;
+            --accent-teal: #00d2ff;
+            --text-primary: #e0f2fe;
+            --text-secondary: #7dd3fc;
+            --code-bg: #030712;
+            --border-glow: rgba(0, 255, 102, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            background-image: linear-gradient(180deg, rgba(0, 255, 102, 0.05) 0%, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 102, 0.15);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px var(--border-glow);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            background: rgba(0, 255, 102, 0.1);
+            border: 1px solid rgba(0, 255, 102, 0.4);
+            color: var(--accent-green);
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #ffffff, var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .hint-box {
+            background: var(--code-bg);
+            border-left: 4px solid var(--accent-teal);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            text-align: left;
+        }
+
+        .hint-box h3 {
+            color: var(--accent-teal);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .hint-box p {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="badge">Recon Phase 1</div>
+        <h1>Trinity Recon</h1>
+        <p>Welcome, Operator. Your isolated environment has been provisioned successfully.</p>
+        
+        <div class="hint-box">
+            <h3>Incoming Transmission</h3>
+            <p>> We've backed up the core access credentials to our anonymous file transfer server.</p>
+            <p>> The file transfer server is active on this container. Check your CTFd portal for the port mapping.</p>
+            <p>> Locate the backup, extract the keys, and proceed to the secure shell.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault Keypass 101 - Reverse Engineering</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(18, 26, 43, 0.75);
+            --accent-green: #00f5a0;
+            --accent-cyan: #00d9f5;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-glow: rgba(0, 245, 160, 0.25);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top, #132426 0%, #0b0f19 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; width: 100%; }
+        header { text-align: center; margin-bottom: 2.5rem; }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle { color: var(--text-muted); font-size: 1.1rem; }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #00b09b, #96c93d);
+            color: #051014;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 245, 160, 0.4); }
+        .terminal {
+            background: #050811;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'Fira Code', monospace;
+            color: #00f5a0;
+            min-height: 150px;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+        input[type="text"] {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            margin-top: 0.5rem;
+        }
+        input[type="text"]:focus { outline: 1px solid var(--accent-green); }
+        .badge {
+            background: rgba(0, 245, 160, 0.1);
+            color: var(--accent-green);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-glow);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Reverse Engineering</span>
+            <h1>Vault Keypass 101</h1>
+            <p class="subtitle">Aegis Cyber Security Vault Verification</p>
+        </header>
+
+        <div class="card">
+            <div class="card-title">🔍 Challenge Mission</div>
+            <p style="margin-bottom: 1rem; line-height: 1.6;">
+                Our intel unit intercepted an encrypted vault binary <code>vault</code>.
+                The binary verifies a secret passcode by performing character XOR operations.
+                Analyze the binary using reverse engineering tools (such as <code>gdb</code>, <code>ltrace</code>, <code>ghidra</code>, or Python decompilation) to extract the passcode!
+            </p>
+            <a href="/download/vault" class="btn">⬇️ Download Binary (vault)</a>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔑 Online Keypass Tester</div>
+            <p style="font-size: 0.95rem; color: var(--text-muted);">
+                Verify your extracted passcode live against the target vault executable.
+            </p>
+            
+            <label style="display: block; margin-top: 1rem; font-weight: 600;">Passcode / Flag:</label>
+            <input type="text" id="passcodeInput" placeholder="flag{...}">
+            
+            <div style="margin-top: 0.75rem;">
+                <button class="btn" onclick="testPasscode()">🔓 Verify Passcode</button>
+            </div>
+
+            <div class="terminal" id="terminalOutput">=== Aegis Vault Passcode Verifier Ready ===
+Submit passcode to test.</div>
+        </div>
+    </div>
+
+    <script>
+        async function testPasscode() {
+            const passcode = document.getElementById("passcodeInput").value;
+            const term = document.getElementById("terminalOutput");
+            term.textContent = "Verifying with binary...\n";
+
+            try {
+                const res = await fetch("/api/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ passcode: passcode })
+                });
+                const data = await res.json();
+                if (data.stdout) {
+                    term.textContent = data.stdout;
+                } else if (data.stderr) {
+                    term.textContent = data.stderr;
+                } else if (data.error) {
+                    term.textContent = "Error: " + data.error;
+                }
+            } catch (err) {
+                term.textContent = "Network Error: " + err;
+            }
+        }
+    </script>
+</body>
+</html>
