@@ -1,1 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="13.347" timestamp="2026-09-07T16:03:10.575169+00:00" hostname="0aa4fa6561c1"><testcase classname="tests.plugin_regression.test_upgrade" name="test_old_mariadb_schema_startup_and_data_preserved" time="13.294" /></testsuite></testsuites>
