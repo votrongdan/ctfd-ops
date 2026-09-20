@@ -8,14 +8,11 @@
 
     // State
     let previewToken = null;
-    let currentLang = document.getElementById("lang_select") ? document.getElementById("lang_select").value : "en";
 
     // DOM Elements
     const uploadForm = document.getElementById("upload-form");
     const uploadBtn = document.getElementById("upload-btn");
     const csvFile = document.getElementById("csv_file");
-    const emailDomain = document.getElementById("email_domain");
-    const langSelect = document.getElementById("lang_select");
     const errorAlert = document.getElementById("error-alert");
     const errorMessage = document.getElementById("error-message");
     const loading = document.getElementById("loading");
@@ -63,16 +60,6 @@
         loading.classList.add("d-none");
     }
 
-    // Language change handler - reload page with new language
-    if (langSelect) {
-        langSelect.addEventListener("change", function () {
-            const newLang = this.value;
-            const url = new URL(window.location.href);
-            url.searchParams.set("lang", newLang);
-            window.location.href = url.toString();
-        });
-    }
-
     // Handle file upload
     if (uploadForm) {
         uploadForm.addEventListener("submit", function (e) {
@@ -95,8 +82,8 @@
             const formData = new FormData();
             formData.append("file", file);
             formData.append("nonce", getNonce());
-            formData.append("email_domain", emailDomain.value || "ctf.local");
-            formData.append("lang", langSelect ? langSelect.value : "en");
+            formData.append("email_domain", "ctf.local");
+            formData.append("lang", "en");
 
             fetch("/plugins/ctfd-account-provisioning/admin/upload", {
                 method: "POST",
@@ -199,7 +186,7 @@
                 },
                 body: JSON.stringify({
                     token: previewToken,
-                    lang: langSelect ? langSelect.value : "en",
+                    lang: "en",
                 }),
             })
                 .then(function (response) { return response.json(); })
