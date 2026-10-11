@@ -9,6 +9,7 @@ from io import BytesIO
 
 import pytest
 from docx import Document
+from docx.oxml.ns import qn
 
 _plugin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _plugin_dir not in sys.path:
@@ -96,3 +97,18 @@ class TestGenerateCredentialDocument:
         output = generate_credential_document(accounts, lang="en")
         doc = Document(output)
         assert len(doc.tables) == 2
+
+    @pytest.mark.parametrize("lang", ["en", "vi"])
+    def test_cards_keep_rows_together_but_allow_breaks_between_cards(self, lang):
+        accounts = [MockAccount(name=f"Player {i}", username=f"player_{i}") for i in range(4)]
+        doc = Document(generate_credential_document(accounts, lang=lang))
+
+        for table in doc.tables:
+            for index, row in enumerate(table.rows):
+                assert row._tr.trPr.find(qn("w:cantSplit")) is not None
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        assert paragraph.paragraph_format.keep_together is True
+                        assert paragraph.paragraph_format.keep_with_next is (index < 4)
+        # Spacing should travel with the next card, without joining two cards.
+        assert all(p.paragraph_format.keep_with_next for p in doc.paragraphs[1:])

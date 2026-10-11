@@ -58,6 +58,7 @@ def _add_credential_card(doc, account, lang, card_index):
         spacer = doc.add_paragraph()
         spacer.paragraph_format.space_before = Pt(6)
         spacer.paragraph_format.space_after = Pt(6)
+        spacer.paragraph_format.keep_with_next = True
 
     # Create a table for the credential card (acts as a bordered card)
     table = doc.add_table(rows=5, cols=2)
@@ -149,6 +150,16 @@ def _add_credential_card(doc, account, lang, card_index):
     for row in table.rows:
         for cell in row.cells:
             _set_cell_border(cell, **border_settings)
+
+    # Keep a printable card on one page. cantSplit protects individual rows;
+    # keep_with_next also prevents page breaks between the rows of this card.
+    # The final note ends the chain so separate cards can move to a new page.
+    for row_index, row in enumerate(table.rows):
+        row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.keep_together = True
+                paragraph.paragraph_format.keep_with_next = row_index < len(table.rows) - 1
 
 
 def generate_credential_document(successful_accounts, lang="en"):
