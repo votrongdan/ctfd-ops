@@ -1,8 +1,8 @@
-# Ultimate CTF Platform
+# ctfd-ops
 
 ## Giới thiệu
 
-Ultimate CTF Platform là một nền tảng tổ chức cuộc thi Capture The Flag (CTF) hoàn chỉnh, được xây dựng dựa trên [CTFd](https://github.com/CTFd/CTFd) và plugin [CTFd-Whale](https://github.com/frankli0324/ctfd-whale).
+ctfd-ops là một nền tảng tổ chức cuộc thi Capture The Flag (CTF) hoàn chỉnh, được xây dựng dựa trên [CTFd](https://github.com/CTFd/CTFd) và plugin [CTFd-Whale](https://github.com/frankli0324/ctfd-whale).
 
 ### Vấn đề cần giải quyết
 
@@ -166,7 +166,7 @@ Mỗi container được inject một flag ngẫu nhiên duy nhất qua biến m
 ## Cấu trúc Repository
 
 ```
-Ultimate-CTF-Platform/
+ctfd-ops/
 ├── README.md                          # File này
 ├── docs/
 │   ├── installation.md                # Hướng dẫn cài đặt
@@ -210,8 +210,8 @@ Ultimate-CTF-Platform/
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd Ultimate-CTF-Platform
+git clone https://github.com/votrongdan/ctfd-ops.git
+cd ctfd-ops
 
 # Khởi tạo Docker Swarm
 docker swarm init

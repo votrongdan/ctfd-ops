@@ -1,6 +1,6 @@
 # Hướng dẫn Cài đặt và Triển khai
 
-Tài liệu này hướng dẫn cài đặt và triển khai hoàn chỉnh hệ thống Ultimate CTF Platform. Mục tiêu là người có kiến thức Linux và Docker cơ bản có thể clone repository và dựng được hệ thống hoạt động.
+Tài liệu này hướng dẫn cài đặt và triển khai hoàn chỉnh hệ thống ctfd-ops. Mục tiêu là người có kiến thức Linux và Docker cơ bản có thể clone repository và dựng được hệ thống hoạt động.
 
 ---
 
@@ -87,8 +87,8 @@ getent group docker | cut -d: -f3
 ## 3. Clone Repository
 
 ```bash
-git clone <repository-url>
-cd Ultimate-CTF-Platform
+git clone https://github.com/votrongdan/ctfd-ops.git
+cd ctfd-ops
 ```
 
 ---

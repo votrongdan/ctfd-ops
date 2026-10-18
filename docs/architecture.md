@@ -1,6 +1,6 @@
 # Kiến trúc kỹ thuật
 
-Tài liệu này mô tả kiến trúc kỹ thuật của hệ thống Ultimate CTF Platform. Mục tiêu giúp developer hiểu cách hệ thống hoạt động và có thể maintain/phát triển tiếp.
+Tài liệu này mô tả kiến trúc kỹ thuật của hệ thống ctfd-ops. Mục tiêu giúp developer hiểu cách hệ thống hoạt động và có thể maintain/phát triển tiếp.
 
 ---
 

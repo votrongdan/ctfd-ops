@@ -14,10 +14,12 @@ This plugin for CTFd allows administrators to monitor and restrict user accounts
 
 ## Installation
 
-1.  Clone this repository or copy the plugin folder into your CTFd instance's `CTFd/plugins` directory:
+The plugin is included in [ctfd-ops](https://github.com/votrongdan/ctfd-ops) at `CTFd/CTFd/plugins/ctfd-single-session/`.
+
+1.  To install it in another CTFd instance, clone `ctfd-ops` and copy the plugin folder into that instance's `CTFd/plugins` directory:
     ```bash
-    cd CTFd/plugins
-    git clone <this-repository-url> ctfd-single-session
+    git clone https://github.com/votrongdan/ctfd-ops.git
+    cp -r ctfd-ops/CTFd/CTFd/plugins/ctfd-single-session /path/to/CTFd/CTFd/plugins/
     ```
 2.  Restart your CTFd instance for the plugin to be loaded.
 

@@ -109,7 +109,7 @@ graph LR
 | ⑨ | FrpRouter → frpc | Push full config via admin API, trigger reload |
 | ⑩ | API → Player | Return access URL or `nc` command |
 
-**Key code path:** [api.py:L91-L106](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/api.py#L91-L106) → [control.py:L13-L38](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/control.py#L13-L38)
+**Key code path:** [api.py:L91-L106](../api.py#L91-L106) → [control.py:L13-L38](../utils/control.py#L13-L38)
 
 ### 1.3 Two Types of Container Deployments
 
@@ -159,7 +159,7 @@ network = DockerUtils.client.networks.create(
 
 ### 1.4 Container Removal
 
-Removal ([control.py:L41-L55](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/control.py#L41-L55)) is the reverse:
+Removal ([control.py:L41-L55](../utils/control.py#L41-L55)) is the reverse:
 
 1. **Unregister** from FRP router (free up port, reload frpc config)
 2. **Remove Docker services** by matching the label `whale_id={user_id}-{uuid}`
@@ -168,7 +168,7 @@ Removal ([control.py:L41-L55](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plu
 
 ### 1.5 Auto-Expiration
 
-A background job runs **every 10 seconds** ([__init__.py:L117-L120](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/__init__.py#L117-L120)):
+A background job runs **every 10 seconds** ([__init__.py:L117-L120](../__init__.py#L117-L120)):
 
 ```python
 scheduler.add_job(
@@ -181,7 +181,7 @@ It queries for containers whose `start_time` is older than `whale:docker_timeout
 
 ### 1.6 Container Renewal
 
-Users can extend their container's lifetime ([control.py:L57-L74](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/control.py#L57-L74)):
+Users can extend their container's lifetime ([control.py:L57-L74](../utils/control.py#L57-L74)):
 - Adds `docker_timeout` seconds to `start_time`
 - Capped at `docker_max_renew_count` renewals (default 5)
 - No Docker operations needed — just a DB timestamp update
@@ -189,13 +189,13 @@ Users can extend their container's lifetime ([control.py:L57-L74](file:///home/d
 ### 1.7 Resource Limits
 
 Each challenge defines:
-- `memory_limit` — e.g. `"128m"`, `"1g"` (converted via [DockerUtils.convert_readable_text](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/docker.py#L182-L195))
+- `memory_limit` — e.g. `"128m"`, `"1g"` (converted via [DockerUtils.convert_readable_text](../utils/docker.py#L182-L195))
 - `cpu_limit` — e.g. `0.5` (converted to nanocpus: `0.5 * 1e9`)
 
 ### 1.8 One Container Per User Constraint
 
 The system enforces **one container per user** at all times:
-- Before creating a new container, the API always calls `try_remove_container(user_id)` first ([api.py:L97](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/api.py#L97))
+- Before creating a new container, the API always calls `try_remove_container(user_id)` first ([api.py:L97](../api.py#L97))
 - If a user tries to view a container for a different challenge than the one running, they get a 403 with a link to the active challenge
 
 ---
@@ -204,7 +204,7 @@ The system enforces **one container per user** at all times:
 
 ### 2.1 Flag Generation
 
-Flags are generated **at container record creation time** — before the Docker container even starts. This happens in the [WhaleContainer.__init__](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/models.py#L81-L89) constructor:
+Flags are generated **at container record creation time** — before the Docker container even starts. This happens in the [WhaleContainer.__init__](../models.py#L81-L89) constructor:
 
 ```python
 def __init__(self, user_id, challenge_id):
@@ -237,7 +237,7 @@ The challenge's Docker image is expected to read `$FLAG` and use it appropriatel
 
 ### 2.3 Flag Validation (The `attempt` Method)
 
-Flag checking happens in [challenge_type.py:L69-L93](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/challenge_type.py#L69-L93) and follows a **two-tier approach**:
+Flag checking happens in [challenge_type.py:L69-L93](../challenge_type.py#L69-L93) and follows a **two-tier approach**:
 
 ```python
 @classmethod
@@ -342,7 +342,7 @@ Each challenge has a `redirect_type` that determines how players access it:
 
 ### 3.4 How Routing Registration Works
 
-When a container is registered ([frp.py:L96-L108](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/routers/frp.py#L96-L108)):
+When a container is registered ([frp.py:L96-L108](../utils/routers/frp.py#L96-L108)):
 
 1. **For `direct` type**: A port is popped from the available port set in Redis/cache
 2. **For `http` type**: The subdomain is derived from the container's UUID
@@ -353,11 +353,11 @@ When a container is registered ([frp.py:L96-L108](file:///home/dan/Desktop/ctfd-
    - Triggers a reload via `GET /api/reload`
 
 > [!WARNING]
-> The `reload()` method ([frp.py:L44-L84](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/routers/frp.py#L44-L84)) rebuilds the **entire** frpc config every time — it's not incremental. This is simple but could be a bottleneck at scale.
+> The `reload()` method ([frp.py:L44-L84](../utils/routers/frp.py#L44-L84)) rebuilds the **entire** frpc config every time — it's not incremental. This is simple but could be a bottleneck at scale.
 
 ### 3.5 Port Management
 
-For `direct` type challenges, ports are managed via Redis sets ([cache.py](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/cache.py)):
+For `direct` type challenges, ports are managed via Redis sets ([cache.py](../utils/cache.py)):
 - On init: all ports in range `[frp_direct_port_minimum, frp_direct_port_maximum]` minus already-used ports are added to a Redis set
 - On container create: `spop` a port from the set
 - On container destroy: `sadd` the port back to the set
@@ -386,11 +386,11 @@ For `direct` type challenges, ports are managed via Redis sets ([cache.py](file:
 
 | Mechanism | Purpose | Implementation |
 |-----------|---------|----------------|
-| **Global container lock** | Prevents race conditions during container creation | Redis distributed lock ([cache.py:L161-L166](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/cache.py#L161-L166)) |
-| **Per-user lock** | Prevents rapid-fire requests from same user | Redis lock per user_id ([cache.py:L141-L148](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/utils/cache.py#L141-L148)) |
-| **Frequency limiter** | 60-second cooldown between container operations | Session-based check ([decorators.py:L32-L53](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/decorators.py#L32-L53)) |
+| **Global container lock** | Prevents race conditions during container creation | Redis distributed lock ([cache.py:L161-L166](../utils/cache.py#L161-L166)) |
+| **Per-user lock** | Prevents rapid-fire requests from same user | Redis lock per user_id ([cache.py:L141-L148](../utils/cache.py#L141-L148)) |
+| **Frequency limiter** | 60-second cooldown between container operations | Session-based check ([decorators.py:L32-L53](../decorators.py#L32-L53)) |
 | **Max container count** | Prevents resource exhaustion | `whale:docker_max_container_count` check before creation |
-| **File lock** | Prevents duplicate scheduler instances (multiple workers) | `fcntl.lockf` on `/tmp/ctfd_whale.lock` ([__init__.py:L110-L112](file:///home/dan/Desktop/ctfd-whale1/CTFd/CTFd/plugins/ctfd-whale/__init__.py#L110-L112)) |
+| **File lock** | Prevents duplicate scheduler instances (multiple workers) | `fcntl.lockf` on `/tmp/ctfd_whale.lock` ([__init__.py:L110-L112](../__init__.py#L110-L112)) |
 
 ---
 
